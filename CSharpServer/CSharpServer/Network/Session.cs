@@ -6,10 +6,17 @@ namespace CSharpServer.Network
     {
         private readonly PacketBuffer packetBuffer = new();
         private readonly Action<byte[]> packetHandler;
+        private readonly Action<byte[]> packetSender;
 
         public Session(Action<byte[]> packetHandler)
+            : this(packetHandler, _ => { })
+        {
+        }
+
+        public Session(Action<byte[]> packetHandler, Action<byte[]> packetSender)
         {
             this.packetHandler = packetHandler;
+            this.packetSender = packetSender;
         }
 
         public void Receive(byte[] data)
@@ -20,6 +27,11 @@ namespace CSharpServer.Network
             {
                 packetHandler(packet);
             }
+        }
+
+        public void Send(byte[] payload)
+        {
+            packetSender(PacketEncoder.Encode(payload));
         }
     }
 }

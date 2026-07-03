@@ -53,5 +53,32 @@ namespace UnitTest.Session
                 packet => Assert.Equal(firstPayload, packet),
                 packet => Assert.Equal(secondPayload, packet));
         }
+
+        [Fact]
+        public void Send_InvokesPacketSender_WithEncodedPacket()
+        {
+            var payload = new byte[] { 0x68, 0x65, 0x6C, 0x6C, 0x6F };
+            var sentPackets = new List<byte[]>();
+            var session = new NetworkSession(_ => { }, packet => sentPackets.Add(packet));
+
+            session.Send(payload);
+
+            var sentPacket = Assert.Single(sentPackets);
+            Assert.Equal(PacketEncoder.Encode(payload), sentPacket);
+        }
+
+        [Fact]
+        public void Send_CanBeReceivedByAnotherSession()
+        {
+            var payload = new byte[] { 0x68, 0x65, 0x6C, 0x6C, 0x6F };
+            var receivedPackets = new List<byte[]>();
+            var receiver = new NetworkSession(packet => receivedPackets.Add(packet));
+            var sender = new NetworkSession(_ => { }, receiver.Receive);
+
+            sender.Send(payload);
+
+            var receivedPacket = Assert.Single(receivedPackets);
+            Assert.Equal(payload, receivedPacket);
+        }
     }
 }
