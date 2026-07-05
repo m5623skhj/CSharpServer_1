@@ -32,13 +32,30 @@ namespace UnitTest.Network
             Assert.Equal(PacketEncoder.Encode(payload), sentPacket);
         }
 
+        [Fact]
+        public void Close_ClosesTransport()
+        {
+            var transport = new FakeConnectionTransport();
+            var connection = new Connection(transport, _ => { });
+
+            connection.Close();
+
+            Assert.True(transport.IsClosed);
+        }
+
         private sealed class FakeConnectionTransport : IConnectionTransport
         {
             public List<byte[]> SentPackets { get; } = [];
+            public bool IsClosed { get; private set; }
 
             public void Send(byte[] data)
             {
                 SentPackets.Add(data);
+            }
+
+            public void Close()
+            {
+                IsClosed = true;
             }
         }
     }
