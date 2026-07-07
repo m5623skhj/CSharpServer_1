@@ -12,8 +12,9 @@ namespace UnitTest.Network
             var receivedData = new List<byte[]>();
             var reader = new StreamConnectionReader(stream, inBufferSize: 8, receivedData.Add);
 
-            reader.ReadOnce();
+            var result = reader.ReadOnce();
 
+            Assert.True(result);
             var received = Assert.Single(receivedData);
             Assert.Equal(data, received);
         }
@@ -25,8 +26,9 @@ namespace UnitTest.Network
             var receivedData = new List<byte[]>();
             var reader = new StreamConnectionReader(stream, inBufferSize: 8, receivedData.Add);
 
-            reader.ReadOnce();
+            var result = reader.ReadOnce();
 
+            Assert.False(result);
             Assert.Empty(receivedData);
         }
     }

@@ -13,18 +13,19 @@ namespace CSharpServer.Network
             this.dataHandler = dataHandler;
         }
 
-        public void ReadOnce()
+        public bool ReadOnce()
         {
             var buffer = new byte[bufferSize];
             var readCount = stream.Read(buffer);
             if (readCount == 0)
             {
-                return;
+                return false;
             }
 
             var data = buffer[..readCount];
 
             dataHandler(data);
+            return true;
         }
     }
 }
