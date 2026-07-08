@@ -21,5 +21,10 @@ namespace CSharpServer.Network
         {
             connection.Send(payload);
         }
+
+        public void Close()
+        {
+            connection.Close();
+        }
     }
 }

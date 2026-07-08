@@ -31,5 +31,27 @@ namespace UnitTest.Network
 
             Assert.Equal(PacketEncoder.Encode(payload), stream.ToArray());
         }
+
+        [Fact]
+        public void Close_ClosesStream()
+        {
+            using var stream = new TrackingStream();
+            var connection = new StreamConnection(stream, inBufferSize: 16, _ => { });
+
+            connection.Close();
+
+            Assert.True(stream.IsDisposed);
+        }
+
+        private sealed class TrackingStream : MemoryStream
+        {
+            public bool IsDisposed { get; private set; }
+
+            protected override void Dispose(bool disposing)
+            {
+                IsDisposed = true;
+                base.Dispose(disposing);
+            }
+        }
     }
 }
