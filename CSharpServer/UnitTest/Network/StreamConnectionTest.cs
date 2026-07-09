@@ -21,6 +21,20 @@ namespace UnitTest.Network
         }
 
         [Fact]
+        public void ReadUntilEnd_InvokesPacketHandler_WhenPacketIsSplitAcrossMultipleReads()
+        {
+            var payload = new byte[] { 0x68, 0x65, 0x6C, 0x6C, 0x6F };
+            using var stream = new MemoryStream(PacketEncoder.Encode(payload));
+            var receivedPackets = new List<byte[]>();
+            var connection = new StreamConnection(stream, inBufferSize: 2, receivedPackets.Add);
+
+            connection.ReadUntilEnd();
+
+            var receivedPacket = Assert.Single(receivedPackets);
+            Assert.Equal(payload, receivedPacket);
+        }
+
+        [Fact]
         public void Send_WritesEncodedPacketToStream()
         {
             var payload = new byte[] { 0x68, 0x65, 0x6C, 0x6C, 0x6F };

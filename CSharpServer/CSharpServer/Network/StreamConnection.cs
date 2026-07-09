@@ -17,6 +17,13 @@ namespace CSharpServer.Network
             return reader.ReadOnce();
         }
 
+        public void ReadUntilEnd()
+        {
+            while (ReadOnce())
+            {
+            }
+        }
+
         public void Send(byte[] payload)
         {
             connection.Send(payload);
