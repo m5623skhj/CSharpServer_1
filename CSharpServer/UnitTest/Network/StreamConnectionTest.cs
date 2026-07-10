@@ -43,9 +43,7 @@ namespace UnitTest.Network
             using var stream = new MemoryStream();
             stream.Write(encodedPacket);
             stream.Position = 0;
-            StreamConnection? connection = null;
-            var echoHandler = new EchoPacketHandler(response => connection!.Send(response));
-            connection = new StreamConnection(stream, inBufferSize: 16, echoHandler.Handle);
+            var connection = EchoStreamConnectionFactory.Create(stream, inBufferSize: 16);
 
             connection.ReadOnce();
 
