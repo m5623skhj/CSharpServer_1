@@ -1,3 +1,4 @@
+using CSharpServer.Content;
 using CSharpServer.Network;
 using CSharpServer.Packet;
 
@@ -32,6 +33,23 @@ namespace UnitTest.Network
 
             var receivedPacket = Assert.Single(receivedPackets);
             Assert.Equal(payload, receivedPacket);
+        }
+
+        [Fact]
+        public void ReadOnce_WritesEchoPacketToStream_WhenEchoHandlerIsUsed()
+        {
+            var payload = new byte[] { 0x68, 0x65, 0x6C, 0x6C, 0x6F };
+            var encodedPacket = PacketEncoder.Encode(payload);
+            using var stream = new MemoryStream();
+            stream.Write(encodedPacket);
+            stream.Position = 0;
+            StreamConnection? connection = null;
+            var echoHandler = new EchoPacketHandler(response => connection!.Send(response));
+            connection = new StreamConnection(stream, inBufferSize: 16, echoHandler.Handle);
+
+            connection.ReadOnce();
+
+            Assert.Equal(encodedPacket.Concat(encodedPacket), stream.ToArray());
         }
 
         [Fact]
