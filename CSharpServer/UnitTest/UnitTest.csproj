@@ -15,6 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\CSharpClient\CSharpClient.csproj" />
     <ProjectReference Include="..\CSharpServer\CSharpServer.csproj" />
   </ItemGroup>
 
