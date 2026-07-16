@@ -67,7 +67,7 @@ The network layer adapts byte streams and TCP connections into packet sessions.
 - `StreamConnectionReader` reads raw bytes from a stream.
 - `StreamConnectionTransport` writes raw bytes to a stream.
 - `StreamConnection` composes stream reader, transport, and connection.
-- `EchoTcpServer` accepts one TCP client and handles it as an echo stream connection.
+- `EchoTcpServer` accepts TCP clients sequentially and handles each as an echo stream connection.
 
 ### Content Layer
 
@@ -108,10 +108,10 @@ Start from `docs/INDEX.md` when navigating documentation.
 
 These limits are deliberate and should be addressed in later TDD steps:
 
-- `EchoTcpServer` handles one client through `AcceptAndHandleOnce`.
+- `EchoTcpServer` handles a fixed client count sequentially through `AcceptAndHandle`.
 - `ReadUntilEnd` is synchronous and blocks until stream EOF.
 - There is no cancellation token or graceful server shutdown API yet.
-- There is no multi-client accept loop yet.
+- There is no concurrent multi-client accept loop yet.
 - Send/close/read operations are not thread-safe for concurrent use yet.
 
 Any change that removes one of these limits must add or update tests and documentation in the same workflow.

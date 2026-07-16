@@ -31,6 +31,16 @@ namespace CSharpServer.Network
             connection.ReadUntilEnd();
         }
 
+        public void AcceptAndHandle(int clientCount)
+        {
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(clientCount);
+
+            for (var i = 0; i < clientCount; i++)
+            {
+                AcceptAndHandleOnce();
+            }
+        }
+
         public void Dispose()
         {
             listener.Stop();

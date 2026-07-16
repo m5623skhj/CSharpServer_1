@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Minimal TCP echo server for one client.
+Minimal TCP echo server for a fixed number of sequential clients.
 
 ## Namespace
 
@@ -12,7 +12,7 @@ Minimal TCP echo server for one client.
 
 ### `EchoTcpServer`
 
-Wraps `TcpListener` and accepts one echo client.
+Wraps `TcpListener` and accepts echo clients sequentially.
 
 ## Public Members
 
@@ -38,10 +38,16 @@ Starts the TCP listener.
 - Creates an echo `StreamConnection`.
 - Reads until the client closes the stream.
 
+### `AcceptAndHandle(int clientCount)`
+
+- Rejects zero or negative client counts.
+- Calls `AcceptAndHandleOnce()` repeatedly.
+- Handles clients sequentially, not concurrently.
+
 ### `Dispose()`
 
 Stops the listener.
 
 ## Notes
 
-This server handles one client only. Multi-client accept loops and cancellation are future work.
+This server handles a fixed number of clients sequentially. Concurrent accept/handle loops and cancellation are future work.

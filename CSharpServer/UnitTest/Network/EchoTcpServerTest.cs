@@ -19,5 +19,21 @@ namespace UnitTest.Network
             Assert.Equal("hello", response);
             await serverTask.WaitAsync(TimeSpan.FromSeconds(5));
         }
+
+        [Fact]
+        public async Task AcceptAndHandle_ReturnsEchoResponsesToMultipleClientsSequentially()
+        {
+            using var server = new EchoTcpServer(IPAddress.Loopback, port: 0, inBufferSize: 2);
+            server.Start();
+            var serverTask = Task.Run(() => server.AcceptAndHandle(clientCount: 2));
+            var client = new EchoClient();
+
+            var firstResponse = client.SendEchoRequest("127.0.0.1", server.Port, "hello");
+            var secondResponse = client.SendEchoRequest("127.0.0.1", server.Port, "world");
+
+            Assert.Equal("hello", firstResponse);
+            Assert.Equal("world", secondResponse);
+            await serverTask.WaitAsync(TimeSpan.FromSeconds(5));
+        }
     }
 }
