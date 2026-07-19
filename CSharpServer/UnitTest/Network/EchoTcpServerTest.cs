@@ -35,5 +35,23 @@ namespace UnitTest.Network
             Assert.Equal("world", secondResponse);
             await serverTask.WaitAsync(TimeSpan.FromSeconds(5));
         }
+
+        [Fact]
+        public async Task AcceptAndHandleConcurrently_ReturnsEchoResponsesToMultipleClients()
+        {
+            using var server = new EchoTcpServer(IPAddress.Loopback, port: 0, inBufferSize: 2);
+            server.Start();
+            var serverTask = server.AcceptAndHandleConcurrently(clientCount: 2);
+            var client = new EchoClient();
+
+            var firstClientTask = Task.Run(() => client.SendEchoRequest("127.0.0.1", server.Port, "hello"));
+            var secondClientTask = Task.Run(() => client.SendEchoRequest("127.0.0.1", server.Port, "world"));
+
+            var responses = await Task.WhenAll(firstClientTask, secondClientTask).WaitAsync(TimeSpan.FromSeconds(5));
+
+            Assert.Contains("hello", responses);
+            Assert.Contains("world", responses);
+            await serverTask.WaitAsync(TimeSpan.FromSeconds(5));
+        }
     }
 }

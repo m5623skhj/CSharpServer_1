@@ -22,3 +22,4 @@ Verifies `EchoTcpServer` and `EchoClient` integration over loopback TCP.
 - Verifies that the response is `hello`.
 - Waits for the one-client server task to finish.
 - Verifies that `AcceptAndHandle(2)` can return echo responses to two clients sequentially.
+- Verifies that `AcceptAndHandleConcurrently(2)` can return echo responses to two clients handled by separate tasks.

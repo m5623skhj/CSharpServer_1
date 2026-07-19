@@ -24,11 +24,7 @@ namespace CSharpServer.Network
 
         public void AcceptAndHandleOnce()
         {
-            using var client = listener.AcceptTcpClient();
-            using var stream = client.GetStream();
-            var connection = EchoStreamConnectionFactory.Create(stream, bufferSize);
-
-            connection.ReadUntilEnd();
+            HandleClient(listener.AcceptTcpClient());
         }
 
         public void AcceptAndHandle(int clientCount)
@@ -38,6 +34,30 @@ namespace CSharpServer.Network
             for (var i = 0; i < clientCount; i++)
             {
                 AcceptAndHandleOnce();
+            }
+        }
+
+        public async Task AcceptAndHandleConcurrently(int clientCount)
+        {
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(clientCount);
+
+            var clientTasks = new List<Task>();
+            for (var i = 0; i < clientCount; i++)
+            {
+                var client = await listener.AcceptTcpClientAsync();
+                clientTasks.Add(Task.Run(() => HandleClient(client)));
+            }
+
+            await Task.WhenAll(clientTasks);
+        }
+
+        private void HandleClient(TcpClient client)
+        {
+            using (client)
+            using (var stream = client.GetStream())
+            {
+                var connection = EchoStreamConnectionFactory.Create(stream, bufferSize);
+                connection.ReadUntilEnd();
             }
         }
 
