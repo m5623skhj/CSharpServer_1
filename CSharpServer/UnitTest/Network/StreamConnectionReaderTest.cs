@@ -31,5 +31,16 @@ namespace UnitTest.Network
             Assert.False(result);
             Assert.Empty(receivedData);
         }
+
+        [Fact]
+        public void Constructor_ThrowsArgumentOutOfRangeException_WhenBufferSizeIsZero()
+        {
+            using var stream = new MemoryStream();
+
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+            {
+                new StreamConnectionReader(stream, inBufferSize: 0, _ => { });
+            });
+        }
     }
 }

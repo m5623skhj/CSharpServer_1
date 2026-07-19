@@ -1,4 +1,6 @@
-﻿namespace CSharpServer.Packet
+using System.Buffers.Binary;
+
+namespace CSharpServer.Packet
 {
     public sealed class PacketBuffer
     {
@@ -50,7 +52,7 @@
 
         private int ReadPayloadLength()
         {
-            return BitConverter.ToInt32(buffer.GetRange(0, HeaderSize).ToArray(), 0);
+            return BinaryPrimitives.ReadInt32LittleEndian(buffer.GetRange(0, HeaderSize).ToArray());
         }
     }
 }

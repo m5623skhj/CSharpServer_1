@@ -8,6 +8,8 @@ namespace CSharpServer.Network
 
         public StreamConnectionReader(Stream stream, int inBufferSize, Action<byte[]> dataHandler)
         {
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(inBufferSize);
+
             this.stream = stream;
             bufferSize = inBufferSize;
             this.dataHandler = dataHandler;

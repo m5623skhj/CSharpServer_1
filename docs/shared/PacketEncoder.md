@@ -24,6 +24,8 @@ Returns a new byte array in this format:
 [4 bytes: little-endian payload length][payload bytes]
 ```
 
+The length header is written with an explicit little-endian conversion.
+
 ## Notes
 
 This class is shared by server and client code through the `CSharpServer` project reference.

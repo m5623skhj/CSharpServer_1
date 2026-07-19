@@ -23,6 +23,10 @@ Reads from a `Stream` and forwards read bytes to a data handler.
 - Returns `false` when EOF is reached.
 - Invokes the data handler and returns `true` when bytes are read.
 
+## Constructor Behavior
+
+- Rejects zero or negative buffer sizes.
+
 ## Notes
 
 This is a synchronous reader. Async reading and cancellation are not implemented yet.

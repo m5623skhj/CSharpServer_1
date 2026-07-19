@@ -1,4 +1,6 @@
-﻿namespace CSharpServer.Packet
+using System.Buffers.Binary;
+
+namespace CSharpServer.Packet
 {
     public static class PacketEncoder
     {
@@ -6,7 +8,7 @@
         {
             var packet = new byte[4 + payload.Length];
 
-            BitConverter.GetBytes(payload.Length).CopyTo(packet, 0);
+            BinaryPrimitives.WriteInt32LittleEndian(packet.AsSpan(0, 4), payload.Length);
             payload.CopyTo(packet, 4);
 
             return packet;

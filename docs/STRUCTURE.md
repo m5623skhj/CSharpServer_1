@@ -48,6 +48,7 @@ Responsibilities:
 - `PacketEncoder` creates length-prefixed packets from payload bytes.
 - `PacketBuffer` accumulates received bytes and returns complete payloads.
 - Server and client both reuse the same packet classes to avoid wire format drift.
+- Packet length headers are written and read with explicit little-endian conversions.
 
 ## Server Layers
 
@@ -68,6 +69,9 @@ The network layer adapts byte streams and TCP connections into packet sessions.
 - `StreamConnectionTransport` writes raw bytes to a stream.
 - `StreamConnection` composes stream reader, transport, and connection.
 - `EchoTcpServer` accepts TCP clients and handles each as an echo stream connection.
+- `EchoTcpServer` can run either for a fixed client count or as a cancellable concurrent accept loop.
+- On cancellation, the open-ended `EchoTcpServer` loop closes active clients and waits for handler tasks to finish.
+- Client-level malformed packet and connection exceptions are isolated from the server accept loop.
 
 ### Content Layer
 
@@ -108,10 +112,9 @@ Start from `docs/INDEX.md` when navigating documentation.
 
 These limits are deliberate and should be addressed in later TDD steps:
 
-- `EchoTcpServer` handles a fixed client count through sequential or concurrent APIs.
+- `Program` handles a fixed client count through sequential or concurrent modes.
 - `ReadUntilEnd` is synchronous and blocks until stream EOF.
-- There is no cancellation token or graceful server shutdown API yet.
-- There is no open-ended multi-client accept loop yet.
+- Executable-level graceful shutdown wiring is not implemented yet.
 - Send/close/read operations are not thread-safe for concurrent use yet.
 
 Any change that removes one of these limits must add or update tests and documentation in the same workflow.

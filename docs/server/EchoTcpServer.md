@@ -22,6 +22,7 @@ Wraps `TcpListener` and accepts echo clients either sequentially or concurrently
 
 - Creates a listener for the supplied address and port.
 - Stores the stream read buffer size.
+- Rejects zero or negative buffer sizes.
 
 ### `Port`
 
@@ -51,10 +52,23 @@ Starts the TCP listener.
 - Handles each accepted client on a separate task.
 - Waits for all client handler tasks to complete.
 
+### `AcceptAndHandleConcurrently(CancellationToken cancellationToken)`
+
+- Accepts clients until cancellation is requested.
+- Handles each accepted client on a separate task.
+- Stops waiting for new clients when cancellation is requested.
+- Closes already accepted active clients when cancellation is requested.
+- Waits for accepted client handler tasks to complete before returning.
+
+## Internal Behavior
+
+- Completed client handler tasks are pruned while the open-ended accept loop is running.
+- Client-level connection, stream, and malformed packet exceptions are isolated so one bad client does not fault the server loop.
+
 ### `Dispose()`
 
 Stops the listener.
 
 ## Notes
 
-This server handles a fixed number of clients. Open-ended accept loops, cancellation, and graceful shutdown are future work.
+This server supports fixed client counts and a cancellable open-ended concurrent accept loop. Executable-level graceful shutdown wiring is future work.

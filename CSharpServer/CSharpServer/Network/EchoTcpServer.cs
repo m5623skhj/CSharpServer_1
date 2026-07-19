@@ -11,6 +11,8 @@ namespace CSharpServer.Network
 
         public EchoTcpServer(IPAddress ipAddress, int port, int inBufferSize)
         {
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(inBufferSize);
+
             listener = new TcpListener(ipAddress, port);
             bufferSize = inBufferSize;
         }
@@ -51,14 +53,86 @@ namespace CSharpServer.Network
             await Task.WhenAll(clientTasks);
         }
 
+        public async Task AcceptAndHandleConcurrently(CancellationToken cancellationToken)
+        {
+            var clientTasks = new List<Task>();
+            var activeClients = new List<TcpClient>();
+            var activeClientsLock = new object();
+
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                try
+                {
+                    PruneCompletedClientTasks(clientTasks);
+                    var client = await listener.AcceptTcpClientAsync(cancellationToken);
+                    lock (activeClientsLock)
+                    {
+                        activeClients.Add(client);
+                    }
+
+                    clientTasks.Add(Task.Run(() =>
+                    {
+                        try
+                        {
+                            HandleClient(client);
+                        }
+                        finally
+                        {
+                            lock (activeClientsLock)
+                            {
+                                activeClients.Remove(client);
+                            }
+                        }
+                    }));
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    break;
+                }
+            }
+
+            CloseActiveClients(activeClients, activeClientsLock);
+            await Task.WhenAll(clientTasks);
+        }
+
         private void HandleClient(TcpClient client)
         {
-            using (client)
-            using (var stream = client.GetStream())
+            try
             {
-                var connection = EchoStreamConnectionFactory.Create(stream, bufferSize);
-                connection.ReadUntilEnd();
+                using (client)
+                using (var stream = client.GetStream())
+                {
+                    var connection = EchoStreamConnectionFactory.Create(stream, bufferSize);
+                    connection.ReadUntilEnd();
+                }
             }
+            catch (Exception exception) when (IsClientConnectionException(exception))
+            {
+            }
+        }
+
+        private static void PruneCompletedClientTasks(List<Task> clientTasks)
+        {
+            clientTasks.RemoveAll(task => task.IsCompletedSuccessfully);
+        }
+
+        private static void CloseActiveClients(List<TcpClient> activeClients, object activeClientsLock)
+        {
+            lock (activeClientsLock)
+            {
+                foreach (var client in activeClients.ToArray())
+                {
+                    client.Close();
+                }
+            }
+        }
+
+        private static bool IsClientConnectionException(Exception exception)
+        {
+            return exception is IOException
+                or SocketException
+                or ObjectDisposedException
+                or InvalidOperationException;
         }
 
         public void Dispose()
