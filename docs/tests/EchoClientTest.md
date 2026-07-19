@@ -18,8 +18,13 @@ Verifies client request encoding and response decoding.
 
 Test-only stream that supplies scripted read bytes and records written bytes.
 
+### `WaitingReadStream`
+
+Test-only stream that records writes and keeps async reads pending until cancellation.
+
 ## Test Coverage
 
 - `SendEchoRequest` writes an encoded request packet.
 - `SendEchoRequest` decodes one encoded response packet.
 - `SendEchoRequest` throws `InvalidOperationException` when the stream closes before a response is received.
+- `SendEchoRequestAsync` throws `TimeoutException` when a response is not received before the timeout.

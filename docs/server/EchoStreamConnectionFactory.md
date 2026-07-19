@@ -20,9 +20,9 @@ Static factory for composing `EchoPacketHandler` and `StreamConnection`.
 
 - Creates an `EchoPacketHandler`.
 - Creates a `StreamConnection`.
-- Wires the echo handler so responses are sent through the same connection.
+- Wires the echo handler so responses are encoded and written to the same stream.
 - Returns the configured connection.
 
 ## Notes
 
-The factory hides the self-referential wiring needed for echo behavior.
+The factory avoids self-referential connection wiring. Echo responses are encoded directly to the stream used by the created connection.

@@ -1,4 +1,5 @@
 using CSharpServer.Network;
+using CSharpServer.Packet;
 
 namespace CSharpServer.Content
 {
@@ -6,9 +7,8 @@ namespace CSharpServer.Content
     {
         public static StreamConnection Create(Stream stream, int inBufferSize)
         {
-            StreamConnection? connection = null;
-            var echoHandler = new EchoPacketHandler(payload => connection!.Send(payload));
-            connection = new StreamConnection(stream, inBufferSize, echoHandler.Handle);
+            var echoHandler = new EchoPacketHandler(payload => stream.Write(PacketEncoder.Encode(payload)));
+            var connection = new StreamConnection(stream, inBufferSize, echoHandler.Handle);
 
             return connection;
         }

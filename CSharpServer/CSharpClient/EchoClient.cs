@@ -29,6 +29,32 @@ public sealed class EchoClient
         return Encoding.UTF8.GetString(responsePayload);
     }
 
+    public async Task<string> SendEchoRequestAsync(Stream stream, string message, TimeSpan responseTimeout)
+    {
+        if (responseTimeout <= TimeSpan.Zero)
+        {
+            throw new ArgumentOutOfRangeException(nameof(responseTimeout));
+        }
+
+        using var cancellationTokenSource = new CancellationTokenSource(responseTimeout);
+
+        try
+        {
+            var payload = Encoding.UTF8.GetBytes(message);
+            var packet = PacketEncoder.Encode(payload);
+
+            await stream.WriteAsync(packet, cancellationTokenSource.Token);
+
+            var responsePayload = await ReadResponsePayloadAsync(stream, cancellationTokenSource.Token);
+
+            return Encoding.UTF8.GetString(responsePayload);
+        }
+        catch (OperationCanceledException exception)
+        {
+            throw new TimeoutException("Echo response was not received before timeout.", exception);
+        }
+    }
+
     private static byte[] ReadResponsePayload(Stream stream)
     {
         var packetBuffer = new PacketBuffer();
@@ -37,6 +63,27 @@ public sealed class EchoClient
         while (true)
         {
             var readCount = stream.Read(receiveBuffer);
+            if (readCount == 0)
+            {
+                throw new InvalidOperationException("Connection closed before echo response was received.");
+            }
+
+            packetBuffer.Append(receiveBuffer[..readCount]);
+            if (packetBuffer.TryReadPacket(out var responsePayload) && responsePayload is not null)
+            {
+                return responsePayload;
+            }
+        }
+    }
+
+    private static async Task<byte[]> ReadResponsePayloadAsync(Stream stream, CancellationToken cancellationToken)
+    {
+        var packetBuffer = new PacketBuffer();
+        var receiveBuffer = new byte[ReceiveBufferSize];
+
+        while (true)
+        {
+            var readCount = await stream.ReadAsync(receiveBuffer, cancellationToken);
             if (readCount == 0)
             {
                 throw new InvalidOperationException("Connection closed before echo response was received.");

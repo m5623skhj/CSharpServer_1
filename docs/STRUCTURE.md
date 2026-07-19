@@ -86,6 +86,7 @@ The client currently exists as a test and manual verification tool.
 
 - `Program` parses command line arguments and prints the response.
 - `EchoClient` connects to a TCP server, sends an encoded echo request, waits for one encoded response, and decodes it.
+- `EchoClient` also exposes an async stream overload with response timeout for test and verification flows.
 
 ## Tests
 
@@ -113,6 +114,7 @@ Start from `docs/INDEX.md` when navigating documentation.
 These limits are deliberate and should be addressed in later TDD steps:
 
 - `Program` handles a fixed client count through sequential or concurrent modes.
+- `CSharpClient.Program` does not expose response timeout configuration yet.
 - `ReadUntilEnd` is synchronous and blocks until stream EOF.
 - Executable-level graceful shutdown wiring is not implemented yet.
 - Send/close/read operations are not thread-safe for concurrent use yet.

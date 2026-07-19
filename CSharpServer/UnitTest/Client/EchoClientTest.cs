@@ -34,6 +34,20 @@ namespace UnitTest.Client
             });
         }
 
+        [Fact]
+        public async Task SendEchoRequestAsync_ThrowsTimeoutException_WhenResponseIsNotReceivedBeforeTimeout()
+        {
+            using var stream = new WaitingReadStream();
+            var client = new EchoClient();
+
+            await Assert.ThrowsAsync<TimeoutException>(() =>
+                client.SendEchoRequestAsync(stream, "hello", TimeSpan.FromMilliseconds(50)));
+
+            Assert.Equal(
+                PacketEncoder.Encode(Encoding.UTF8.GetBytes("hello")),
+                stream.WrittenData);
+        }
+
         private sealed class ScriptedStream : Stream
         {
             private readonly MemoryStream readStream;
@@ -86,6 +100,74 @@ namespace UnitTest.Client
                 if (disposing)
                 {
                     readStream.Dispose();
+                    writeStream.Dispose();
+                }
+
+                base.Dispose(disposing);
+            }
+        }
+
+        private sealed class WaitingReadStream : Stream
+        {
+            private readonly MemoryStream writeStream = new();
+
+            public byte[] WrittenData => writeStream.ToArray();
+
+            public override bool CanRead => true;
+            public override bool CanSeek => false;
+            public override bool CanWrite => true;
+            public override long Length => throw new NotSupportedException();
+
+            public override long Position
+            {
+                get => throw new NotSupportedException();
+                set => throw new NotSupportedException();
+            }
+
+            public override void Flush()
+            {
+            }
+
+            public override int Read(byte[] buffer, int offset, int count)
+            {
+                throw new NotSupportedException();
+            }
+
+            public override async ValueTask<int> ReadAsync(
+                Memory<byte> buffer,
+                CancellationToken cancellationToken = default)
+            {
+                await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+                return 0;
+            }
+
+            public override long Seek(long offset, SeekOrigin origin)
+            {
+                throw new NotSupportedException();
+            }
+
+            public override void SetLength(long value)
+            {
+                throw new NotSupportedException();
+            }
+
+            public override void Write(byte[] buffer, int offset, int count)
+            {
+                writeStream.Write(buffer, offset, count);
+            }
+
+            public override ValueTask WriteAsync(
+                ReadOnlyMemory<byte> buffer,
+                CancellationToken cancellationToken = default)
+            {
+                writeStream.Write(buffer.Span);
+                return ValueTask.CompletedTask;
+            }
+
+            protected override void Dispose(bool disposing)
+            {
+                if (disposing)
+                {
                     writeStream.Dispose();
                 }
 

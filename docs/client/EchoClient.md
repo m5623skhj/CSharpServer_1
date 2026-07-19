@@ -31,6 +31,16 @@ Sends a length-prefixed echo request and reads one length-prefixed response.
 - Reads and decodes one response packet with `PacketBuffer`.
 - Returns the response as a UTF-8 string.
 
+### `SendEchoRequestAsync(Stream stream, string message, TimeSpan responseTimeout)`
+
+- Rejects zero or negative timeout values.
+- Encodes and writes one echo request packet asynchronously.
+- Reads one response packet asynchronously.
+- Cancels the wait when the timeout expires.
+- Returns the response as a UTF-8 string.
+
 ## Failure Behavior
 
 Throws `InvalidOperationException` if the stream closes before a complete response packet is received.
+
+The timeout overload throws `TimeoutException` if the response is not received before the configured timeout.
