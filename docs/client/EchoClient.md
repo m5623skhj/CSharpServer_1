@@ -31,6 +31,13 @@ Sends a length-prefixed echo request and reads one length-prefixed response.
 - Reads and decodes one response packet with `PacketBuffer`.
 - Returns the response as a UTF-8 string.
 
+### `SendEchoRequestAsync(string host, int port, string message, TimeSpan responseTimeout)`
+
+- Rejects zero or negative timeout values before opening a connection.
+- Opens a `TcpClient` and connects to the target host and port asynchronously.
+- Delegates packet send/receive handling to the asynchronous stream overload.
+- Closes the client and stream after the request completes or fails.
+
 ### `SendEchoRequestAsync(Stream stream, string message, TimeSpan responseTimeout)`
 
 - Rejects zero or negative timeout values.
@@ -43,4 +50,4 @@ Sends a length-prefixed echo request and reads one length-prefixed response.
 
 Throws `InvalidOperationException` if the stream closes before a complete response packet is received.
 
-The timeout overload throws `TimeoutException` if the response is not received before the configured timeout.
+The timeout overloads throw `TimeoutException` if the response is not received before the configured timeout.

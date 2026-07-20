@@ -1,3 +1,5 @@
+using System.Net;
+using System.Net.Sockets;
 using System.Text;
 using CSharpClient;
 using CSharpServer.Packet;
@@ -46,6 +48,50 @@ namespace UnitTest.Client
             Assert.Equal(
                 PacketEncoder.Encode(Encoding.UTF8.GetBytes("hello")),
                 stream.WrittenData);
+        }
+
+        [Fact]
+        public async Task SendEchoRequestAsync_WithHostAndPort_ThrowsTimeoutException_WhenServerDoesNotRespond()
+        {
+            var listener = new TcpListener(IPAddress.Loopback, 0);
+            listener.Start();
+
+            try
+            {
+                var port = ((IPEndPoint)listener.LocalEndpoint).Port;
+                var serverTask = AcceptRequestWithoutRespondingAsync(listener);
+                var client = new EchoClient();
+
+                await Assert.ThrowsAsync<TimeoutException>(() =>
+                    client.SendEchoRequestAsync(
+                        "127.0.0.1",
+                        port,
+                        "hello",
+                        TimeSpan.FromMilliseconds(100)));
+
+                await serverTask;
+            }
+            finally
+            {
+                listener.Stop();
+            }
+        }
+
+        private static async Task AcceptRequestWithoutRespondingAsync(TcpListener listener)
+        {
+            using var serverClient = await listener.AcceptTcpClientAsync();
+            using var stream = serverClient.GetStream();
+            var requestBuffer = new byte[sizeof(int) + "hello".Length];
+
+            await stream.ReadExactlyAsync(requestBuffer);
+
+            try
+            {
+                await stream.ReadExactlyAsync(new byte[1]);
+            }
+            catch (EndOfStreamException)
+            {
+            }
         }
 
         private sealed class ScriptedStream : Stream

@@ -16,10 +16,10 @@ Internal static entry class for the client process.
 
 ## Behavior
 
-- Reads host, port, and message from command line arguments.
-- Defaults to `127.0.0.1`, port `5000`, and message `hello`.
+- Reads host, port, message, and response timeout in milliseconds from command line arguments.
+- Defaults to `127.0.0.1`, port `5000`, message `hello`, and a 5000 millisecond response timeout.
 - Creates an `EchoClient`.
-- Sends one echo request.
+- Sends one echo request asynchronously with the configured response timeout.
 - Prints the decoded echo response.
 
 ## Notes

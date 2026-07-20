@@ -17,6 +17,21 @@ public sealed class EchoClient
         return SendEchoRequest(stream, message);
     }
 
+    public async Task<string> SendEchoRequestAsync(
+        string host,
+        int port,
+        string message,
+        TimeSpan responseTimeout)
+    {
+        ValidateResponseTimeout(responseTimeout);
+
+        using var client = new TcpClient();
+        await client.ConnectAsync(host, port);
+
+        await using var stream = client.GetStream();
+        return await SendEchoRequestAsync(stream, message, responseTimeout);
+    }
+
     public string SendEchoRequest(Stream stream, string message)
     {
         var payload = Encoding.UTF8.GetBytes(message);
@@ -31,10 +46,7 @@ public sealed class EchoClient
 
     public async Task<string> SendEchoRequestAsync(Stream stream, string message, TimeSpan responseTimeout)
     {
-        if (responseTimeout <= TimeSpan.Zero)
-        {
-            throw new ArgumentOutOfRangeException(nameof(responseTimeout));
-        }
+        ValidateResponseTimeout(responseTimeout);
 
         using var cancellationTokenSource = new CancellationTokenSource(responseTimeout);
 
@@ -52,6 +64,14 @@ public sealed class EchoClient
         catch (OperationCanceledException exception)
         {
             throw new TimeoutException("Echo response was not received before timeout.", exception);
+        }
+    }
+
+    private static void ValidateResponseTimeout(TimeSpan responseTimeout)
+    {
+        if (responseTimeout <= TimeSpan.Zero)
+        {
+            throw new ArgumentOutOfRangeException(nameof(responseTimeout));
         }
     }
 
