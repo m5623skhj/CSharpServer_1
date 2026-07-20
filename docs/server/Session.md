@@ -21,6 +21,7 @@ Owns a `PacketBuffer` and uses `PacketEncoder` for outgoing payloads.
 - Appends raw received data to the internal `PacketBuffer`.
 - Reads all currently complete packets.
 - Invokes the payload handler for each packet in order.
+- Serializes concurrent receive calls through packet assembly and handler execution.
 
 ### `Send(byte[] payload)`
 
@@ -29,4 +30,6 @@ Owns a `PacketBuffer` and uses `PacketEncoder` for outgoing payloads.
 
 ## Notes
 
-The class assumes serialized access. Concurrent `Receive` or `Send` calls are not protected.
+Concurrent `Receive` calls are serialized to protect packet buffer state and handler order.
+
+`Send` synchronization depends on the configured packet sender. Server connections use the thread-safe `StreamConnectionTransport` sender.

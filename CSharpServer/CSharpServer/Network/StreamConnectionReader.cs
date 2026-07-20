@@ -5,6 +5,7 @@ namespace CSharpServer.Network
         private readonly Stream stream;
         private readonly int bufferSize;
         private readonly Action<byte[]> dataHandler;
+        private readonly object readSyncRoot = new();
 
         public StreamConnectionReader(Stream stream, int inBufferSize, Action<byte[]> dataHandler)
         {
@@ -17,17 +18,20 @@ namespace CSharpServer.Network
 
         public bool ReadOnce()
         {
-            var buffer = new byte[bufferSize];
-            var readCount = stream.Read(buffer);
-            if (readCount == 0)
+            lock (readSyncRoot)
             {
-                return false;
+                var buffer = new byte[bufferSize];
+                var readCount = stream.Read(buffer);
+                if (readCount == 0)
+                {
+                    return false;
+                }
+
+                var data = buffer[..readCount];
+
+                dataHandler(data);
+                return true;
             }
-
-            var data = buffer[..readCount];
-
-            dataHandler(data);
-            return true;
         }
     }
 }

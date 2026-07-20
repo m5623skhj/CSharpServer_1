@@ -7,6 +7,7 @@ namespace CSharpServer.Network
         private readonly PacketBuffer packetBuffer = new();
         private readonly Action<byte[]> packetHandler;
         private readonly Action<byte[]> packetSender;
+        private readonly object receiveSyncRoot = new();
 
         public Session(Action<byte[]> packetHandler)
             : this(packetHandler, _ => { })
@@ -21,11 +22,14 @@ namespace CSharpServer.Network
 
         public void Receive(byte[] data)
         {
-            packetBuffer.Append(data);
-
-            while (packetBuffer.TryReadPacket(out var packet) && packet is not null)
+            lock (receiveSyncRoot)
             {
-                packetHandler(packet);
+                packetBuffer.Append(data);
+
+                while (packetBuffer.TryReadPacket(out var packet) && packet is not null)
+                {
+                    packetHandler(packet);
+                }
             }
         }
 

@@ -42,5 +42,88 @@ namespace UnitTest.Network
                 new StreamConnectionReader(stream, inBufferSize: 0, _ => { });
             });
         }
+
+        [Fact]
+        public async Task ReadOnce_SerializesStreamReads_WhenCalledConcurrently()
+        {
+            using var stream = new ConcurrentReadTrackingStream();
+            var receivedData = new List<byte[]>();
+            var reader = new StreamConnectionReader(stream, inBufferSize: 8, receivedData.Add);
+            var firstRead = Task.Run(reader.ReadOnce);
+
+            Assert.True(stream.FirstReadEntered.Wait(TimeSpan.FromSeconds(1)));
+
+            var secondRead = Task.Run(reader.ReadOnce);
+            await Task.WhenAll(firstRead, secondRead);
+
+            Assert.False(stream.HadOverlappingReads);
+            Assert.Single(receivedData);
+        }
+
+        private sealed class ConcurrentReadTrackingStream : Stream
+        {
+            private int activeReadCount;
+            private int readCallCount;
+
+            public ManualResetEventSlim FirstReadEntered { get; } = new();
+            public ManualResetEventSlim SecondReadEntered { get; } = new();
+            public bool HadOverlappingReads { get; private set; }
+
+            public override bool CanRead => true;
+            public override bool CanSeek => false;
+            public override bool CanWrite => false;
+            public override long Length => throw new NotSupportedException();
+
+            public override long Position
+            {
+                get => throw new NotSupportedException();
+                set => throw new NotSupportedException();
+            }
+
+            public override void Flush()
+            {
+            }
+
+            public override int Read(byte[] buffer, int offset, int count)
+            {
+                if (Interlocked.Increment(ref activeReadCount) > 1)
+                {
+                    HadOverlappingReads = true;
+                }
+
+                try
+                {
+                    if (Interlocked.Increment(ref readCallCount) == 1)
+                    {
+                        FirstReadEntered.Set();
+                        SecondReadEntered.Wait(TimeSpan.FromMilliseconds(100));
+                        buffer[offset] = 0x01;
+                        return 1;
+                    }
+
+                    SecondReadEntered.Set();
+                    return 0;
+                }
+                finally
+                {
+                    Interlocked.Decrement(ref activeReadCount);
+                }
+            }
+
+            public override long Seek(long offset, SeekOrigin origin)
+            {
+                throw new NotSupportedException();
+            }
+
+            public override void SetLength(long value)
+            {
+                throw new NotSupportedException();
+            }
+
+            public override void Write(byte[] buffer, int offset, int count)
+            {
+                throw new NotSupportedException();
+            }
+        }
     }
 }

@@ -22,6 +22,7 @@ Reads from a `Stream` and forwards read bytes to a data handler.
 - Calls `Stream.Read`.
 - Returns `false` when EOF is reached.
 - Invokes the data handler and returns `true` when bytes are read.
+- Serializes concurrent calls so the stream and data handler are accessed by one read operation at a time.
 
 ## Constructor Behavior
 
@@ -29,4 +30,4 @@ Reads from a `Stream` and forwards read bytes to a data handler.
 
 ## Notes
 
-This is a synchronous reader. Async reading and cancellation are not implemented yet.
+This is a synchronous reader. Async reading and cancellation are not implemented yet. Concurrent calls block until the active read and its data handler complete.

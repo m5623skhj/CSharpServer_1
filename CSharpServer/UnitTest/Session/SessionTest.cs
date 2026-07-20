@@ -80,5 +80,55 @@ namespace UnitTest.Session
             var receivedPacket = Assert.Single(receivedPackets);
             Assert.Equal(payload, receivedPacket);
         }
+
+        [Fact]
+        public async Task Receive_SerializesPacketHandlers_WhenCalledConcurrently()
+        {
+            var handler = new ConcurrentPacketHandler();
+            var session = new NetworkSession(handler.Handle);
+            var firstReceive = Task.Run(() => session.Receive(PacketEncoder.Encode([0x01])));
+
+            Assert.True(handler.FirstHandlerEntered.Wait(TimeSpan.FromSeconds(1)));
+
+            var secondReceive = Task.Run(() => session.Receive(PacketEncoder.Encode([0x02])));
+            await Task.WhenAll(firstReceive, secondReceive);
+
+            Assert.False(handler.HadOverlappingHandlers);
+        }
+
+        private sealed class ConcurrentPacketHandler
+        {
+            private int activeHandlerCount;
+            private int handlerInvocationCount;
+
+            public ManualResetEventSlim FirstHandlerEntered { get; } = new();
+            public ManualResetEventSlim SecondHandlerEntered { get; } = new();
+            public bool HadOverlappingHandlers { get; private set; }
+
+            public void Handle(byte[] payload)
+            {
+                if (Interlocked.Increment(ref activeHandlerCount) > 1)
+                {
+                    HadOverlappingHandlers = true;
+                }
+
+                try
+                {
+                    if (Interlocked.Increment(ref handlerInvocationCount) == 1)
+                    {
+                        FirstHandlerEntered.Set();
+                        SecondHandlerEntered.Wait(TimeSpan.FromMilliseconds(100));
+                    }
+                    else
+                    {
+                        SecondHandlerEntered.Set();
+                    }
+                }
+                finally
+                {
+                    Interlocked.Decrement(ref activeHandlerCount);
+                }
+            }
+        }
     }
 }

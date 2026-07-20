@@ -14,6 +14,10 @@ Tests `Session` receive/send behavior.
 
 Verifies session-level packet framing around payload handlers.
 
+### `ConcurrentPacketHandler`
+
+Test-only handler that detects whether two packet callbacks execute at the same time.
+
 ## Test Coverage
 
 - Complete packet receive invokes the packet handler.
@@ -21,3 +25,4 @@ Verifies session-level packet framing around payload handlers.
 - Multiple received packets are handled in order.
 - `Send` encodes payloads before invoking the sender.
 - One session's sent packet can be received by another session.
+- Concurrent receive calls do not execute packet handlers at the same time.
