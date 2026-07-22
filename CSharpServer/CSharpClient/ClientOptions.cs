@@ -1,3 +1,6 @@
+using System.Text;
+using CSharpServer.Packet;
+
 namespace CSharpClient;
 
 public sealed class ClientOptions
@@ -47,6 +50,13 @@ public sealed class ClientOptions
         }
 
         var message = args.Length > 2 ? args[2] : DefaultMessage;
+        if (Encoding.UTF8.GetByteCount(message) > ProtocolLimits.MaxPayloadLength)
+        {
+            error = $"Message cannot exceed {ProtocolLimits.MaxPayloadLength} UTF-8 bytes."
+                + $"{Environment.NewLine}{Usage}";
+            return false;
+        }
+
         var responseTimeoutMilliseconds = DefaultResponseTimeoutMilliseconds;
         if (args.Length > 3
             && (!int.TryParse(args[3], out responseTimeoutMilliseconds)

@@ -22,5 +22,23 @@ namespace UnitTest.Packet
 
             Assert.Equal(new byte[] { 0x00, 0x00, 0x00, 0x00 }, packet);
         }
+
+        [Fact]
+        public void Encode_ThrowsArgumentException_WhenPayloadExceedsProtocolLimit()
+        {
+            var payload = new byte[ProtocolLimits.MaxPayloadLength + 1];
+
+            Assert.Throws<ArgumentException>(() => PacketEncoder.Encode(payload));
+        }
+
+        [Fact]
+        public void Encode_ReturnsPacket_WhenPayloadMatchesProtocolLimit()
+        {
+            var payload = new byte[ProtocolLimits.MaxPayloadLength];
+
+            var packet = PacketEncoder.Encode(payload);
+
+            Assert.Equal(sizeof(int) + ProtocolLimits.MaxPayloadLength, packet.Length);
+        }
     }
 }

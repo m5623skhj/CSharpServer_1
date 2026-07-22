@@ -6,3 +6,4 @@ Shared files are currently implemented in the `CSharpServer` project and referen
 
 - [PacketBuffer](PacketBuffer.md)
 - [PacketEncoder](PacketEncoder.md)
+- [ProtocolLimits](ProtocolLimits.md)

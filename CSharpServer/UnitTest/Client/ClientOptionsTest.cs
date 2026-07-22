@@ -1,4 +1,5 @@
 using CSharpClient;
+using CSharpServer.Packet;
 
 namespace UnitTest.Client
 {
@@ -77,6 +78,24 @@ namespace UnitTest.Client
 
             Assert.False(result);
             Assert.Null(options);
+            Assert.Contains(ClientOptions.Usage, error);
+        }
+
+        [Fact]
+        public void TryParse_ReturnsUsageError_WhenMessageExceedsProtocolLimit()
+        {
+            var message = new string(
+                '\u20AC',
+                (ProtocolLimits.MaxPayloadLength / 3) + 1);
+
+            var result = ClientOptions.TryParse(
+                ["localhost", "5000", message],
+                out var options,
+                out var error);
+
+            Assert.False(result);
+            Assert.Null(options);
+            Assert.Contains(ProtocolLimits.MaxPayloadLength.ToString(), error);
             Assert.Contains(ClientOptions.Usage, error);
         }
     }

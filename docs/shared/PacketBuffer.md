@@ -21,6 +21,7 @@ Stateful packet decoder for stream-oriented TCP data.
 `PacketBuffer(int maxPayloadLength = 4096)`
 
 - Stores a maximum allowed payload length.
+- Defaults to `ProtocolLimits.MaxPayloadLength`.
 - Rejects zero or negative maximum length values.
 
 ### `Append(byte[] data)`

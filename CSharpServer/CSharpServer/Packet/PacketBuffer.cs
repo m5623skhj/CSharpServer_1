@@ -5,11 +5,10 @@ namespace CSharpServer.Packet
     public sealed class PacketBuffer
     {
         private const int HeaderSize = 4;
-        private const int DefaultMaxPayloadLength = 4096;
         private readonly int maxPayloadLength;
         private readonly List<byte> buffer = [];
 
-        public PacketBuffer(int maxPayloadLength = DefaultMaxPayloadLength)
+        public PacketBuffer(int maxPayloadLength = ProtocolLimits.MaxPayloadLength)
         {
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxPayloadLength);
             this.maxPayloadLength = maxPayloadLength;

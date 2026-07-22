@@ -28,6 +28,7 @@ Contain the validated connection target, echo message, and response timeout.
 
 - Defaults to host `127.0.0.1`, port `5000`, message `hello`, and a five-second timeout.
 - Accepts ports from `1` through `65535`.
+- Rejects messages larger than `ProtocolLimits.MaxPayloadLength` when encoded as UTF-8.
 - Requires a positive integer timeout in milliseconds.
 - Rejects invalid values and extra arguments without throwing parsing exceptions.
 - Includes `Usage` in validation errors.

@@ -50,6 +50,7 @@ Responsibilities:
 
 - `PacketEncoder` creates length-prefixed packets from payload bytes.
 - `PacketBuffer` accumulates received bytes and returns complete payloads.
+- `ProtocolLimits` defines the shared 4096-byte maximum payload length used for encoding, decoding, and client validation.
 - Server and client both reuse the same packet classes to avoid wire format drift.
 - Packet length headers are written and read with explicit little-endian conversions.
 

@@ -26,6 +26,8 @@ Returns a new byte array in this format:
 
 The length header is written with an explicit little-endian conversion.
 
+Payloads larger than `ProtocolLimits.MaxPayloadLength` are rejected with `ArgumentException` before a packet is allocated.
+
 ## Notes
 
 This class is shared by server and client code through the `CSharpServer` project reference.
