@@ -15,7 +15,7 @@ namespace UnitTest.Client
             Assert.Equal("127.0.0.1", options.Host);
             Assert.Equal(5000, options.Port);
             Assert.Equal("hello", options.Message);
-            Assert.Equal(TimeSpan.FromSeconds(5), options.ResponseTimeout);
+            Assert.Equal(TimeSpan.FromSeconds(5), options.RequestTimeout);
             Assert.Null(error);
         }
 
@@ -32,7 +32,7 @@ namespace UnitTest.Client
             Assert.Equal("localhost", options.Host);
             Assert.Equal(6000, options.Port);
             Assert.Equal("world", options.Message);
-            Assert.Equal(TimeSpan.FromMilliseconds(2500), options.ResponseTimeout);
+            Assert.Equal(TimeSpan.FromMilliseconds(2500), options.RequestTimeout);
             Assert.Null(error);
         }
 

@@ -91,10 +91,10 @@ The content layer defines what to do with decoded payloads.
 
 The client currently exists as a test and manual verification tool.
 
-- `ClientOptions` validates command-line values and applies defaults without throwing parsing exceptions.
+- `ClientOptions` validates command-line values and applies a total request timeout without throwing parsing exceptions.
 - `Program` prints validation errors or sends a request and prints the response.
 - `EchoClient` connects to a TCP server, sends an encoded echo request, waits for one encoded response, and decodes it.
-- `EchoClient` exposes async host/port and stream overloads with response timeout for test and verification flows.
+- `EchoClient` applies timeout or caller cancellation across TCP connect, request write, and response read.
 
 ## Tests
 

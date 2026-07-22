@@ -21,15 +21,38 @@ public sealed class EchoClient
         string host,
         int port,
         string message,
-        TimeSpan responseTimeout)
+        TimeSpan requestTimeout)
     {
-        ValidateResponseTimeout(responseTimeout);
+        ValidateRequestTimeout(requestTimeout);
 
+        using var cancellationTokenSource = new CancellationTokenSource(requestTimeout);
+
+        try
+        {
+            return await SendEchoRequestAsync(
+                host,
+                port,
+                message,
+                cancellationTokenSource.Token);
+        }
+        catch (OperationCanceledException exception)
+            when (cancellationTokenSource.IsCancellationRequested)
+        {
+            throw CreateTimeoutException(exception);
+        }
+    }
+
+    public async Task<string> SendEchoRequestAsync(
+        string host,
+        int port,
+        string message,
+        CancellationToken cancellationToken)
+    {
         using var client = new TcpClient();
-        await client.ConnectAsync(host, port);
+        await client.ConnectAsync(host, port, cancellationToken);
 
         await using var stream = client.GetStream();
-        return await SendEchoRequestAsync(stream, message, responseTimeout);
+        return await SendEchoRequestAsyncCore(stream, message, cancellationToken);
     }
 
     public string SendEchoRequest(Stream stream, string message)
@@ -44,35 +67,52 @@ public sealed class EchoClient
         return Encoding.UTF8.GetString(responsePayload);
     }
 
-    public async Task<string> SendEchoRequestAsync(Stream stream, string message, TimeSpan responseTimeout)
+    public async Task<string> SendEchoRequestAsync(Stream stream, string message, TimeSpan requestTimeout)
     {
-        ValidateResponseTimeout(responseTimeout);
+        ValidateRequestTimeout(requestTimeout);
 
-        using var cancellationTokenSource = new CancellationTokenSource(responseTimeout);
+        using var cancellationTokenSource = new CancellationTokenSource(requestTimeout);
 
         try
         {
-            var payload = Encoding.UTF8.GetBytes(message);
-            var packet = PacketEncoder.Encode(payload);
-
-            await stream.WriteAsync(packet, cancellationTokenSource.Token);
-
-            var responsePayload = await ReadResponsePayloadAsync(stream, cancellationTokenSource.Token);
-
-            return Encoding.UTF8.GetString(responsePayload);
+            return await SendEchoRequestAsyncCore(
+                stream,
+                message,
+                cancellationTokenSource.Token);
         }
         catch (OperationCanceledException exception)
+            when (cancellationTokenSource.IsCancellationRequested)
         {
-            throw new TimeoutException("Echo response was not received before timeout.", exception);
+            throw CreateTimeoutException(exception);
         }
     }
 
-    private static void ValidateResponseTimeout(TimeSpan responseTimeout)
+    private static async Task<string> SendEchoRequestAsyncCore(
+        Stream stream,
+        string message,
+        CancellationToken cancellationToken)
     {
-        if (responseTimeout <= TimeSpan.Zero)
+        var payload = Encoding.UTF8.GetBytes(message);
+        var packet = PacketEncoder.Encode(payload);
+
+        await stream.WriteAsync(packet, cancellationToken);
+
+        var responsePayload = await ReadResponsePayloadAsync(stream, cancellationToken);
+
+        return Encoding.UTF8.GetString(responsePayload);
+    }
+
+    private static void ValidateRequestTimeout(TimeSpan requestTimeout)
+    {
+        if (requestTimeout <= TimeSpan.Zero)
         {
-            throw new ArgumentOutOfRangeException(nameof(responseTimeout));
+            throw new ArgumentOutOfRangeException(nameof(requestTimeout));
         }
+    }
+
+    private static TimeoutException CreateTimeoutException(OperationCanceledException exception)
+    {
+        return new TimeoutException("Echo request did not complete before timeout.", exception);
     }
 
     private static byte[] ReadResponsePayload(Stream stream)

@@ -16,7 +16,7 @@ internal static class Program
             options!.Host,
             options.Port,
             options.Message,
-            options.ResponseTimeout);
+            options.RequestTimeout);
 
         Console.WriteLine(response);
         return 0;

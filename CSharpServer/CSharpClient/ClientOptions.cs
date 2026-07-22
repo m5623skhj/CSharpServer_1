@@ -8,23 +8,23 @@ public sealed class ClientOptions
     private const string DefaultHost = "127.0.0.1";
     private const int DefaultPort = 5000;
     private const string DefaultMessage = "hello";
-    private const int DefaultResponseTimeoutMilliseconds = 5000;
+    private const int DefaultRequestTimeoutMilliseconds = 5000;
 
-    private ClientOptions(string host, int port, string message, TimeSpan responseTimeout)
+    private ClientOptions(string host, int port, string message, TimeSpan requestTimeout)
     {
         Host = host;
         Port = port;
         Message = message;
-        ResponseTimeout = responseTimeout;
+        RequestTimeout = requestTimeout;
     }
 
     public const string Usage =
-        "Usage: CSharpClient [host] [port] [message] [response-timeout-ms]";
+        "Usage: CSharpClient [host] [port] [message] [request-timeout-ms]";
 
     public string Host { get; }
     public int Port { get; }
     public string Message { get; }
-    public TimeSpan ResponseTimeout { get; }
+    public TimeSpan RequestTimeout { get; }
 
     public static bool TryParse(
         string[] args,
@@ -57,12 +57,12 @@ public sealed class ClientOptions
             return false;
         }
 
-        var responseTimeoutMilliseconds = DefaultResponseTimeoutMilliseconds;
+        var requestTimeoutMilliseconds = DefaultRequestTimeoutMilliseconds;
         if (args.Length > 3
-            && (!int.TryParse(args[3], out responseTimeoutMilliseconds)
-                || responseTimeoutMilliseconds <= 0))
+            && (!int.TryParse(args[3], out requestTimeoutMilliseconds)
+                || requestTimeoutMilliseconds <= 0))
         {
-            error = $"Response timeout must be a positive integer.{Environment.NewLine}{Usage}";
+            error = $"Request timeout must be a positive integer.{Environment.NewLine}{Usage}";
             return false;
         }
 
@@ -70,7 +70,7 @@ public sealed class ClientOptions
             host,
             port,
             message,
-            TimeSpan.FromMilliseconds(responseTimeoutMilliseconds));
+            TimeSpan.FromMilliseconds(requestTimeoutMilliseconds));
         return true;
     }
 }

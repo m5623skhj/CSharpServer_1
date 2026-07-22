@@ -37,14 +37,15 @@ namespace UnitTest.Client
         }
 
         [Fact]
-        public async Task SendEchoRequestAsync_ThrowsTimeoutException_WhenResponseIsNotReceivedBeforeTimeout()
+        public async Task SendEchoRequestAsync_ThrowsTimeoutException_WhenRequestDoesNotCompleteBeforeTimeout()
         {
             using var stream = new WaitingReadStream();
             var client = new EchoClient();
 
-            await Assert.ThrowsAsync<TimeoutException>(() =>
+            var exception = await Assert.ThrowsAsync<TimeoutException>(() =>
                 client.SendEchoRequestAsync(stream, "hello", TimeSpan.FromMilliseconds(50)));
 
+            Assert.Contains("request", exception.Message);
             Assert.Equal(
                 PacketEncoder.Encode(Encoding.UTF8.GetBytes("hello")),
                 stream.WrittenData);
@@ -75,6 +76,21 @@ namespace UnitTest.Client
             {
                 listener.Stop();
             }
+        }
+
+        [Fact]
+        public async Task SendEchoRequestAsync_WithHostAndPort_PropagatesCancellationDuringConnect()
+        {
+            using var cancellationTokenSource = new CancellationTokenSource();
+            await cancellationTokenSource.CancelAsync();
+            var client = new EchoClient();
+
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+                client.SendEchoRequestAsync(
+                    "127.0.0.1",
+                    port: 1,
+                    "hello",
+                    cancellationTokenSource.Token));
         }
 
         private static async Task AcceptRequestWithoutRespondingAsync(TcpListener listener)

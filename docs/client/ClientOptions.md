@@ -20,15 +20,15 @@ Immutable validated echo client options.
 
 Provides the client command-line usage text.
 
-### `Host`, `Port`, `Message`, `ResponseTimeout`
+### `Host`, `Port`, `Message`, `RequestTimeout`
 
-Contain the validated connection target, echo message, and response timeout.
+Contain the validated connection target, echo message, and total request timeout.
 
 ### `TryParse(string[] args, out ClientOptions? options, out string? error)`
 
-- Defaults to host `127.0.0.1`, port `5000`, message `hello`, and a five-second timeout.
+- Defaults to host `127.0.0.1`, port `5000`, message `hello`, and a five-second request timeout.
 - Accepts ports from `1` through `65535`.
 - Rejects messages larger than `ProtocolLimits.MaxPayloadLength` when encoded as UTF-8.
-- Requires a positive integer timeout in milliseconds.
+- Requires a positive integer request timeout in milliseconds.
 - Rejects invalid values and extra arguments without throwing parsing exceptions.
 - Includes `Usage` in validation errors.
