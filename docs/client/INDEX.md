@@ -3,6 +3,7 @@
 ## Entry Point
 
 - [Program](Program.md)
+- [ClientOptions](ClientOptions.md)
 
 ## Echo Client
 

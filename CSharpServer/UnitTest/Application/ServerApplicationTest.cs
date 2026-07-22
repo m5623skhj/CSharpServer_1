@@ -9,7 +9,8 @@ namespace UnitTest.Application
         {
             using var cancellationTokenSource = new CancellationTokenSource();
             var application = new ServerApplication();
-            var runTask = application.RunAsync(["0"], cancellationTokenSource.Token);
+            Assert.True(ServerOptions.TryParse(["0"], out var options, out _));
+            var runTask = application.RunAsync(options!, cancellationTokenSource.Token);
 
             await cancellationTokenSource.CancelAsync();
 

@@ -16,10 +16,9 @@ Starts and runs the loopback TCP echo server until cancellation is requested.
 
 ## Public Methods
 
-### `RunAsync(string[] args, CancellationToken cancellationToken)`
+### `RunAsync(ServerOptions options, CancellationToken cancellationToken)`
 
-- Reads the TCP port from the first command line argument.
-- Uses port `5000` when no port is supplied.
+- Uses a previously validated `ServerOptions` instance.
 - Creates an `EchoTcpServer` bound to `127.0.0.1` with a 4096-byte read buffer.
 - Starts the listener and prints its bound endpoint.
 - Runs the open-ended concurrent accept loop.

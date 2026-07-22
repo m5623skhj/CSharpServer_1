@@ -3,10 +3,12 @@
 ## Application Tests
 
 - [ServerApplicationTest](ServerApplicationTest.md)
+- [ServerOptionsTest](ServerOptionsTest.md)
 
 ## Client Tests
 
 - [EchoClientTest](EchoClientTest.md)
+- [ClientOptionsTest](ClientOptionsTest.md)
 
 ## Content Tests
 

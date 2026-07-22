@@ -2,27 +2,23 @@ namespace CSharpClient;
 
 internal static class Program
 {
-    private const string DefaultHost = "127.0.0.1";
-    private const int DefaultPort = 5000;
-    private const string DefaultMessage = "hello";
-    private const int DefaultResponseTimeoutMilliseconds = 5000;
-
-    public static async Task Main(string[] args)
+    public static async Task<int> Main(string[] args)
     {
-        var host = args.Length > 0 ? args[0] : DefaultHost;
-        var port = args.Length > 1 ? int.Parse(args[1]) : DefaultPort;
-        var message = args.Length > 2 ? args[2] : DefaultMessage;
-        var responseTimeoutMilliseconds = args.Length > 3
-            ? int.Parse(args[3])
-            : DefaultResponseTimeoutMilliseconds;
+        if (!ClientOptions.TryParse(args, out var options, out var error))
+        {
+            Console.Error.WriteLine(error);
+            return 1;
+        }
+
         var client = new EchoClient();
 
         var response = await client.SendEchoRequestAsync(
-            host,
-            port,
-            message,
-            TimeSpan.FromMilliseconds(responseTimeoutMilliseconds));
+            options!.Host,
+            options.Port,
+            options.Message,
+            options.ResponseTimeout);
 
         Console.WriteLine(response);
+        return 0;
     }
 }
