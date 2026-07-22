@@ -2,6 +2,7 @@
 
 ## Application Tests
 
+- [ExecutableProgramTest](ExecutableProgramTest.md)
 - [ServerApplicationTest](ServerApplicationTest.md)
 - [ServerOptionsTest](ServerOptionsTest.md)
 

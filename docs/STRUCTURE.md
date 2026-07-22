@@ -99,7 +99,7 @@ The client currently exists as a test and manual verification tool.
 
 Tests are grouped by behavior:
 
-- `UnitTest.Application`: server options and executable lifetime behavior.
+- `UnitTest.Application`: server options, executable lifetime behavior, and server/client process-boundary validation.
 - `UnitTest.Packet`: packet framing and codec behavior.
 - `UnitTest.Session`: session-level receive/send behavior.
 - `UnitTest.Network`: transport, stream connection, TCP server, and loopback integration behavior.
