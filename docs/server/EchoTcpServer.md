@@ -49,13 +49,13 @@ Starts the TCP listener.
 
 - Rejects zero or negative client counts.
 - Accepts the configured number of clients.
-- Handles each accepted client on a separate task.
+- Handles each accepted client with asynchronous stream reads.
 - Waits for all client handler tasks to complete.
 
 ### `AcceptAndHandleConcurrently(CancellationToken cancellationToken)`
 
 - Accepts clients until cancellation is requested.
-- Handles each accepted client on a separate task.
+- Handles each accepted client with asynchronous stream reads using the supplied cancellation token.
 - Stops waiting for new clients when cancellation is requested.
 - Closes already accepted active clients when cancellation is requested.
 - Waits for accepted client handler tasks to complete before returning.
@@ -63,6 +63,8 @@ Starts the TCP listener.
 ## Internal Behavior
 
 - Completed client handler tasks are pruned while the open-ended accept loop is running.
+- Concurrent handlers await `StreamConnection.ReadUntilEndAsync` without wrapping synchronous reads in `Task.Run`.
+- Expected cancellation from an active client read is handled as normal server shutdown.
 - Client-level connection, stream, and malformed packet exceptions are isolated so one bad client does not fault the server loop.
 
 ### `Dispose()`

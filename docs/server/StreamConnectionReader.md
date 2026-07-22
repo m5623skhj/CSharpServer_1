@@ -24,10 +24,17 @@ Reads from a `Stream` and forwards read bytes to a data handler.
 - Invokes the data handler and returns `true` when bytes are read.
 - Serializes concurrent calls so the stream and data handler are accessed by one read operation at a time.
 
+### `ReadOnceAsync(CancellationToken cancellationToken)`
+
+- Waits asynchronously for exclusive reader access.
+- Reads one chunk with `Stream.ReadAsync` and the supplied cancellation token.
+- Returns `false` at EOF or forwards the read bytes to the data handler and returns `true`.
+- Propagates cancellation through `OperationCanceledException`.
+
 ## Constructor Behavior
 
 - Rejects zero or negative buffer sizes.
 
 ## Notes
 
-This is a synchronous reader. Async reading and cancellation are not implemented yet. Concurrent calls block until the active read and its data handler complete.
+Synchronous and asynchronous calls share one `SemaphoreSlim`. Concurrent calls wait until the active read and its data handler complete.

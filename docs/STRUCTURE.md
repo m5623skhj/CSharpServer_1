@@ -65,11 +65,12 @@ The network layer adapts byte streams and TCP connections into packet sessions.
 
 - `Session` owns packet encoding/decoding around payload handlers and serializes receive processing.
 - `Connection` connects `Session` to a transport.
-- `StreamConnectionReader` serializes raw reads from a stream.
+- `StreamConnectionReader` serializes synchronous and asynchronous raw reads from a stream.
 - `StreamConnectionTransport` serializes raw stream writes and close operations.
 - `StreamConnection` composes stream reader, transport, and connection.
 - `EchoTcpServer` accepts TCP clients and handles each as an echo stream connection.
 - `EchoTcpServer` can run either for a fixed client count or as a cancellable concurrent accept loop.
+- Concurrent client handlers use cancellation-aware asynchronous stream reads.
 - On cancellation, the open-ended `EchoTcpServer` loop closes active clients and waits for handler tasks to finish.
 - Client-level malformed packet and connection exceptions are isolated from the server accept loop.
 
@@ -114,7 +115,6 @@ Start from `docs/INDEX.md` when navigating documentation.
 These limits are deliberate and should be addressed in later TDD steps:
 
 - `Program` handles a fixed client count through sequential or concurrent modes.
-- `ReadUntilEnd` is synchronous and blocks until stream EOF.
 - Executable-level graceful shutdown wiring is not implemented yet.
 
 Any change that removes one of these limits must add or update tests and documentation in the same workflow.

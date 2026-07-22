@@ -24,6 +24,10 @@ Reads one chunk from the stream through `StreamConnectionReader`.
 
 Repeatedly calls `ReadOnce()` until EOF.
 
+### `ReadUntilEndAsync(CancellationToken cancellationToken)`
+
+Repeatedly awaits `StreamConnectionReader.ReadOnceAsync` until EOF and propagates cancellation.
+
 ### `Send(byte[] payload)`
 
 Sends a payload through the internal `Connection`.
@@ -34,4 +38,4 @@ Closes the internal connection transport.
 
 ## Notes
 
-`ReadUntilEnd()` blocks until stream EOF. This is intentional for the current synchronous single-client flow.
+`ReadUntilEnd()` remains available for the sequential synchronous server flow. Concurrent server flows use `ReadUntilEndAsync()`.

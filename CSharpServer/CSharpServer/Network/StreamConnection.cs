@@ -24,6 +24,13 @@ namespace CSharpServer.Network
             }
         }
 
+        public async Task ReadUntilEndAsync(CancellationToken cancellationToken)
+        {
+            while (await reader.ReadOnceAsync(cancellationToken))
+            {
+            }
+        }
+
         public void Send(byte[] payload)
         {
             connection.Send(payload);

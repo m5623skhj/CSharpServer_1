@@ -47,7 +47,7 @@ namespace CSharpServer.Network
             for (var i = 0; i < clientCount; i++)
             {
                 var client = await listener.AcceptTcpClientAsync();
-                clientTasks.Add(Task.Run(() => HandleClient(client)));
+                clientTasks.Add(HandleClientAsync(client, CancellationToken.None));
             }
 
             await Task.WhenAll(clientTasks);
@@ -70,20 +70,11 @@ namespace CSharpServer.Network
                         activeClients.Add(client);
                     }
 
-                    clientTasks.Add(Task.Run(() =>
-                    {
-                        try
-                        {
-                            HandleClient(client);
-                        }
-                        finally
-                        {
-                            lock (activeClientsLock)
-                            {
-                                activeClients.Remove(client);
-                            }
-                        }
-                    }));
+                    clientTasks.Add(HandleTrackedClientAsync(
+                        client,
+                        activeClients,
+                        activeClientsLock,
+                        cancellationToken));
                 }
                 catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
@@ -108,6 +99,44 @@ namespace CSharpServer.Network
             }
             catch (Exception exception) when (IsClientConnectionException(exception))
             {
+            }
+        }
+
+        private async Task HandleClientAsync(TcpClient client, CancellationToken cancellationToken)
+        {
+            try
+            {
+                using (client)
+                {
+                    await using var stream = client.GetStream();
+                    var connection = EchoStreamConnectionFactory.Create(stream, bufferSize);
+                    await connection.ReadUntilEndAsync(cancellationToken);
+                }
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+            }
+            catch (Exception exception) when (IsClientConnectionException(exception))
+            {
+            }
+        }
+
+        private async Task HandleTrackedClientAsync(
+            TcpClient client,
+            List<TcpClient> activeClients,
+            object activeClientsLock,
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                await HandleClientAsync(client, cancellationToken);
+            }
+            finally
+            {
+                lock (activeClientsLock)
+                {
+                    activeClients.Remove(client);
+                }
             }
         }
 

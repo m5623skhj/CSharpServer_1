@@ -60,6 +60,22 @@ namespace UnitTest.Network
             Assert.Single(receivedData);
         }
 
+        [Fact]
+        public async Task ReadOnceAsync_StopsWaiting_WhenCancellationIsRequested()
+        {
+            using var stream = new CancellationAwareReadStream();
+            using var cancellationTokenSource = new CancellationTokenSource();
+            var receivedData = new List<byte[]>();
+            var reader = new StreamConnectionReader(stream, inBufferSize: 8, receivedData.Add);
+            var readTask = reader.ReadOnceAsync(cancellationTokenSource.Token);
+
+            await stream.ReadStarted.Task.WaitAsync(TimeSpan.FromSeconds(1));
+            await cancellationTokenSource.CancelAsync();
+
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => readTask);
+            Assert.Empty(receivedData);
+        }
+
         private sealed class ConcurrentReadTrackingStream : Stream
         {
             private int activeReadCount;
@@ -108,6 +124,56 @@ namespace UnitTest.Network
                 {
                     Interlocked.Decrement(ref activeReadCount);
                 }
+            }
+
+            public override long Seek(long offset, SeekOrigin origin)
+            {
+                throw new NotSupportedException();
+            }
+
+            public override void SetLength(long value)
+            {
+                throw new NotSupportedException();
+            }
+
+            public override void Write(byte[] buffer, int offset, int count)
+            {
+                throw new NotSupportedException();
+            }
+        }
+
+        private sealed class CancellationAwareReadStream : Stream
+        {
+            public TaskCompletionSource ReadStarted { get; } = new(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+
+            public override bool CanRead => true;
+            public override bool CanSeek => false;
+            public override bool CanWrite => false;
+            public override long Length => throw new NotSupportedException();
+
+            public override long Position
+            {
+                get => throw new NotSupportedException();
+                set => throw new NotSupportedException();
+            }
+
+            public override void Flush()
+            {
+            }
+
+            public override int Read(byte[] buffer, int offset, int count)
+            {
+                throw new NotSupportedException();
+            }
+
+            public override async ValueTask<int> ReadAsync(
+                Memory<byte> buffer,
+                CancellationToken cancellationToken = default)
+            {
+                ReadStarted.TrySetResult();
+                await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+                return 0;
             }
 
             public override long Seek(long offset, SeekOrigin origin)
