@@ -1,5 +1,9 @@
 # Test Documentation
 
+## Application Tests
+
+- [ServerApplicationTest](ServerApplicationTest.md)
+
 ## Client Tests
 
 - [EchoClientTest](EchoClientTest.md)

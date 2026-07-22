@@ -22,17 +22,18 @@ CSharpClient
 
 CSharpServer
   Program
-    -> EchoTcpServer
-      -> TcpListener
-      -> EchoStreamConnectionFactory
-        -> EchoPacketHandler
-        -> StreamConnection
-          -> StreamConnectionReader
-          -> Connection
-            -> Session
-              -> PacketBuffer
-              -> PacketEncoder
-          -> StreamConnectionTransport
+    -> ServerApplication
+      -> EchoTcpServer
+        -> TcpListener
+        -> EchoStreamConnectionFactory
+          -> EchoPacketHandler
+          -> StreamConnection
+            -> StreamConnectionReader
+            -> Connection
+              -> Session
+                -> PacketBuffer
+                -> PacketEncoder
+            -> StreamConnectionTransport
 ```
 
 ## Protocol
@@ -68,6 +69,7 @@ The network layer adapts byte streams and TCP connections into packet sessions.
 - `StreamConnectionReader` serializes synchronous and asynchronous raw reads from a stream.
 - `StreamConnectionTransport` serializes raw stream writes and close operations.
 - `StreamConnection` composes stream reader, transport, and connection.
+- `ServerApplication` owns listener startup and the cancellable executable server lifetime.
 - `EchoTcpServer` accepts TCP clients and handles each as an echo stream connection.
 - `EchoTcpServer` can run either for a fixed client count or as a cancellable concurrent accept loop.
 - Concurrent client handlers use cancellation-aware asynchronous stream reads.
@@ -114,7 +116,6 @@ Start from `docs/INDEX.md` when navigating documentation.
 
 These limits are deliberate and should be addressed in later TDD steps:
 
-- `Program` handles a fixed client count through sequential or concurrent modes.
-- Executable-level graceful shutdown wiring is not implemented yet.
+- Server and client numeric command-line arguments currently surface parsing exceptions instead of usage-oriented validation errors.
 
 Any change that removes one of these limits must add or update tests and documentation in the same workflow.
