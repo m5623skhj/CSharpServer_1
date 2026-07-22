@@ -19,10 +19,12 @@ Static factory for composing `EchoPacketHandler` and `StreamConnection`.
 ### `Create(Stream stream, int inBufferSize)`
 
 - Creates an `EchoPacketHandler`.
+- Creates one `StreamConnectionTransport` for the stream.
 - Creates a `StreamConnection`.
-- Wires the echo handler so responses are encoded and written to the same stream.
+- Wires the echo handler and internal connection to the same transport.
+- Encodes echo responses and sends them through the transport synchronization boundary.
 - Returns the configured connection.
 
 ## Notes
 
-The factory avoids self-referential connection wiring. Echo responses are encoded directly to the stream used by the created connection.
+The factory avoids self-referential connection wiring while ensuring echo responses, regular sends, and close operations share one transport.

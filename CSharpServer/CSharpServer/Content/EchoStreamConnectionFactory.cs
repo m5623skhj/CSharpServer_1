@@ -7,8 +7,14 @@ namespace CSharpServer.Content
     {
         public static StreamConnection Create(Stream stream, int inBufferSize)
         {
-            var echoHandler = new EchoPacketHandler(payload => stream.Write(PacketEncoder.Encode(payload)));
-            var connection = new StreamConnection(stream, inBufferSize, echoHandler.Handle);
+            var transport = new StreamConnectionTransport(stream);
+            var echoHandler = new EchoPacketHandler(
+                payload => transport.Send(PacketEncoder.Encode(payload)));
+            var connection = new StreamConnection(
+                stream,
+                inBufferSize,
+                echoHandler.Handle,
+                transport);
 
             return connection;
         }

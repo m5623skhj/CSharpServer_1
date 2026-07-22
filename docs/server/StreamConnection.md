@@ -14,6 +14,12 @@ Composes stream reading, stream writing, and packet session handling.
 
 High-level connection wrapper for a `Stream`.
 
+## Construction
+
+The public constructor creates a `StreamConnectionTransport` for the supplied stream.
+
+An internal composition constructor accepts an existing transport so factories can share one transport between content handlers and the internal `Connection`.
+
 ## Public Methods
 
 ### `ReadOnce()`

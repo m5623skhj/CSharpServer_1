@@ -6,8 +6,20 @@ namespace CSharpServer.Network
         private readonly StreamConnectionReader reader;
 
         public StreamConnection(Stream stream, int inBufferSize, Action<byte[]> packetHandler)
+            : this(
+                stream,
+                inBufferSize,
+                packetHandler,
+                new StreamConnectionTransport(stream))
         {
-            var transport = new StreamConnectionTransport(stream);
+        }
+
+        internal StreamConnection(
+            Stream stream,
+            int inBufferSize,
+            Action<byte[]> packetHandler,
+            IConnectionTransport transport)
+        {
             connection = new Connection(transport, packetHandler);
             reader = new StreamConnectionReader(stream, inBufferSize, connection.ReceiveFromTransport);
         }

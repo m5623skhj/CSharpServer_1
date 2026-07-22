@@ -85,7 +85,7 @@ The network layer adapts byte streams and TCP connections into packet sessions.
 The content layer defines what to do with decoded payloads.
 
 - `EchoPacketHandler` sends the same payload back.
-- `EchoStreamConnectionFactory` wires echo behavior into a `StreamConnection`.
+- `EchoStreamConnectionFactory` wires echo behavior into a `StreamConnection` using one shared transport for echo, send, and close operations.
 
 ## Client Layers
 
