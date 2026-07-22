@@ -8,13 +8,37 @@ namespace CSharpServer.Network
     {
         private readonly TcpListener listener;
         private readonly int bufferSize;
+        private readonly TimeSpan clientIdleTimeout;
+        private readonly SemaphoreSlim clientSlots;
 
         public EchoTcpServer(IPAddress ipAddress, int port, int inBufferSize)
+            : this(
+                ipAddress,
+                port,
+                inBufferSize,
+                maxConcurrentClients: 100,
+                clientIdleTimeout: TimeSpan.FromSeconds(30))
+        {
+        }
+
+        public EchoTcpServer(
+            IPAddress ipAddress,
+            int port,
+            int inBufferSize,
+            int maxConcurrentClients,
+            TimeSpan clientIdleTimeout)
         {
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(inBufferSize);
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxConcurrentClients);
+            if (clientIdleTimeout <= TimeSpan.Zero)
+            {
+                throw new ArgumentOutOfRangeException(nameof(clientIdleTimeout));
+            }
 
             listener = new TcpListener(ipAddress, port);
             bufferSize = inBufferSize;
+            this.clientIdleTimeout = clientIdleTimeout;
+            clientSlots = new SemaphoreSlim(maxConcurrentClients, maxConcurrentClients);
         }
 
         public int Port => ((IPEndPoint)listener.LocalEndpoint).Port;
@@ -46,8 +70,17 @@ namespace CSharpServer.Network
             var clientTasks = new List<Task>();
             for (var i = 0; i < clientCount; i++)
             {
-                var client = await listener.AcceptTcpClientAsync();
-                clientTasks.Add(HandleClientAsync(client, CancellationToken.None));
+                await clientSlots.WaitAsync();
+                try
+                {
+                    var client = await listener.AcceptTcpClientAsync();
+                    clientTasks.Add(HandleClientWithSlotAsync(client, CancellationToken.None));
+                }
+                catch
+                {
+                    clientSlots.Release();
+                    throw;
+                }
             }
 
             await Task.WhenAll(clientTasks);
@@ -61,24 +94,46 @@ namespace CSharpServer.Network
 
             while (!cancellationToken.IsCancellationRequested)
             {
+                var slotAcquired = false;
+                TcpClient? acceptedClient = null;
                 try
                 {
                     PruneCompletedClientTasks(clientTasks);
-                    var client = await listener.AcceptTcpClientAsync(cancellationToken);
+                    await clientSlots.WaitAsync(cancellationToken);
+                    slotAcquired = true;
+                    acceptedClient = await listener.AcceptTcpClientAsync(cancellationToken);
                     lock (activeClientsLock)
                     {
-                        activeClients.Add(client);
+                        activeClients.Add(acceptedClient);
                     }
 
                     clientTasks.Add(HandleTrackedClientAsync(
-                        client,
+                        acceptedClient,
                         activeClients,
                         activeClientsLock,
                         cancellationToken));
+                    acceptedClient = null;
+                    slotAcquired = false;
                 }
                 catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
+                    acceptedClient?.Dispose();
+                    if (slotAcquired)
+                    {
+                        clientSlots.Release();
+                    }
+
                     break;
+                }
+                catch
+                {
+                    acceptedClient?.Dispose();
+                    if (slotAcquired)
+                    {
+                        clientSlots.Release();
+                    }
+
+                    throw;
                 }
             }
 
@@ -110,7 +165,7 @@ namespace CSharpServer.Network
                 {
                     await using var stream = client.GetStream();
                     var connection = EchoStreamConnectionFactory.Create(stream, bufferSize);
-                    await connection.ReadUntilEndAsync(cancellationToken);
+                    await connection.ReadUntilEndAsync(cancellationToken, clientIdleTimeout);
                 }
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -118,6 +173,20 @@ namespace CSharpServer.Network
             }
             catch (Exception exception) when (IsClientConnectionException(exception))
             {
+            }
+        }
+
+        private async Task HandleClientWithSlotAsync(
+            TcpClient client,
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                await HandleClientAsync(client, cancellationToken);
+            }
+            finally
+            {
+                clientSlots.Release();
             }
         }
 
@@ -137,6 +206,8 @@ namespace CSharpServer.Network
                 {
                     activeClients.Remove(client);
                 }
+
+                clientSlots.Release();
             }
         }
 
@@ -159,9 +230,9 @@ namespace CSharpServer.Network
         private static bool IsClientConnectionException(Exception exception)
         {
             return exception is IOException
+                or InvalidDataException
                 or SocketException
-                or ObjectDisposedException
-                or InvalidOperationException;
+                or ObjectDisposedException;
         }
 
         public void Dispose()

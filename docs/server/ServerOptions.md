@@ -24,9 +24,18 @@ Provides the server command-line usage text.
 
 Contains the validated listener port. Port `0` is allowed for OS assignment.
 
+### `MaxConcurrentClients`
+
+Contains the positive maximum number of clients handled at the same time.
+
+### `ClientIdleTimeout`
+
+Contains the positive duration allowed between client reads.
+
 ### `TryParse(string[] args, out ServerOptions? options, out string? error)`
 
 - Uses port `5000` when no argument is supplied.
-- Accepts one integer port from `0` through `65535`.
-- Rejects invalid ports and extra arguments without throwing parsing exceptions.
+- Defaults to 100 concurrent clients and a 30-second client idle timeout.
+- Accepts a port, maximum concurrent client count, and idle timeout in milliseconds.
+- Rejects invalid ports, non-positive limits, and extra arguments without throwing parsing exceptions.
 - Includes `Usage` in validation errors.

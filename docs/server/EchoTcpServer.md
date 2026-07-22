@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Minimal TCP echo server for a fixed number of clients.
+TCP echo server with bounded concurrent client handling and idle connection cleanup.
 
 ## Namespace
 
@@ -22,7 +22,13 @@ Wraps `TcpListener` and accepts echo clients either sequentially or concurrently
 
 - Creates a listener for the supplied address and port.
 - Stores the stream read buffer size.
+- Uses defaults of 100 concurrent clients and a 30-second client idle timeout.
 - Rejects zero or negative buffer sizes.
+
+`EchoTcpServer(IPAddress ipAddress, int port, int inBufferSize, int maxConcurrentClients, TimeSpan clientIdleTimeout)`
+
+- Configures the maximum number of actively handled clients and the per-read idle timeout.
+- Rejects zero or negative buffer size, connection limit, and idle timeout values.
 
 ### `Port`
 
@@ -49,23 +55,28 @@ Starts the TCP listener.
 
 - Rejects zero or negative client counts.
 - Accepts the configured number of clients.
-- Handles each accepted client with asynchronous stream reads.
+- Acquires a connection slot before accepting each client.
+- Handles accepted clients with asynchronous stream reads up to the configured limit.
 - Waits for all client handler tasks to complete.
 
 ### `AcceptAndHandleConcurrently(CancellationToken cancellationToken)`
 
 - Accepts clients until cancellation is requested.
+- Waits for a connection slot before accepting another client.
 - Handles each accepted client with asynchronous stream reads using the supplied cancellation token.
+- Closes clients that do not produce read data before the configured idle timeout.
 - Stops waiting for new clients when cancellation is requested.
 - Closes already accepted active clients when cancellation is requested.
 - Waits for accepted client handler tasks to complete before returning.
 
 ## Internal Behavior
 
-- Completed client handler tasks are pruned while the open-ended accept loop is running.
+- Connection slots are returned from handler `finally` blocks, including failure and cancellation paths.
+- Completed successful client handler tasks are pruned while the open-ended accept loop is running.
 - Concurrent handlers await `StreamConnection.ReadUntilEndAsync` without wrapping synchronous reads in `Task.Run`.
 - Expected cancellation from an active client read is handled as normal server shutdown.
-- Client-level connection, stream, and malformed packet exceptions are isolated so one bad client does not fault the server loop.
+- Client-level connection, stream, and `InvalidDataException` failures are isolated so one bad client does not fault the server loop.
+- General `InvalidOperationException` failures are not swallowed as client network errors.
 
 ### `Dispose()`
 
@@ -73,4 +84,4 @@ Stops the listener.
 
 ## Notes
 
-This server supports fixed client counts and a cancellable open-ended concurrent accept loop. Executable-level graceful shutdown wiring is future work.
+This server supports fixed client counts and a cancellable open-ended concurrent accept loop.

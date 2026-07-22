@@ -9,7 +9,12 @@ public sealed class ServerApplication
 
     public async Task RunAsync(ServerOptions options, CancellationToken cancellationToken)
     {
-        using var server = new EchoTcpServer(IPAddress.Loopback, options.Port, DefaultBufferSize);
+        using var server = new EchoTcpServer(
+            IPAddress.Loopback,
+            options.Port,
+            DefaultBufferSize,
+            options.MaxConcurrentClients,
+            options.ClientIdleTimeout);
         server.Start();
 
         Console.WriteLine($"CSharpServer listening on 127.0.0.1:{server.Port}");

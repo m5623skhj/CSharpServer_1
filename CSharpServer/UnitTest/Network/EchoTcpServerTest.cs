@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Sockets;
 using CSharpClient;
 using CSharpServer.Network;
+using CSharpServer.Packet;
 
 namespace UnitTest.Network
 {
@@ -85,10 +86,90 @@ namespace UnitTest.Network
             var serverTask = server.AcceptAndHandleConcurrently(cancellationTokenSource.Token);
 
             await idleClient.ConnectAsync(IPAddress.Loopback, server.Port);
-            await Task.Delay(TimeSpan.FromMilliseconds(50));
+            var stream = idleClient.GetStream();
+            var packet = PacketEncoder.Encode([0x01]);
+            await stream.WriteAsync(packet);
+            var response = new byte[packet.Length];
+            await stream.ReadExactlyAsync(response);
             await cancellationTokenSource.CancelAsync();
 
+            Assert.Equal(packet, response);
             await serverTask.WaitAsync(TimeSpan.FromSeconds(5));
+        }
+
+        [Fact]
+        public async Task AcceptAndHandleConcurrently_DoesNotExceedMaxConcurrentClients()
+        {
+            using var server = new EchoTcpServer(
+                IPAddress.Loopback,
+                port: 0,
+                inBufferSize: 2,
+                maxConcurrentClients: 1,
+                clientIdleTimeout: TimeSpan.FromSeconds(5));
+            using var serverCancellation = new CancellationTokenSource();
+            using var firstClient = new TcpClient();
+            using var secondClient = new TcpClient();
+            server.Start();
+            var serverTask = server.AcceptAndHandleConcurrently(serverCancellation.Token);
+
+            try
+            {
+                await firstClient.ConnectAsync(IPAddress.Loopback, server.Port);
+                var firstStream = firstClient.GetStream();
+                var packet = PacketEncoder.Encode([0x01]);
+                await firstStream.WriteAsync(packet);
+                var firstResponse = new byte[packet.Length];
+                await firstStream.ReadExactlyAsync(firstResponse);
+
+                await secondClient.ConnectAsync(IPAddress.Loopback, server.Port);
+                var secondStream = secondClient.GetStream();
+                await secondStream.WriteAsync(packet);
+                var secondResponse = new byte[packet.Length];
+                using var readCancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(200));
+
+                await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+                    secondStream.ReadExactlyAsync(secondResponse, readCancellation.Token).AsTask());
+            }
+            finally
+            {
+                firstClient.Close();
+                secondClient.Close();
+                await serverCancellation.CancelAsync();
+                await serverTask.WaitAsync(TimeSpan.FromSeconds(5));
+            }
+        }
+
+        [Fact]
+        public async Task AcceptAndHandleConcurrently_ClosesClientAfterIdleTimeout()
+        {
+            using var server = new EchoTcpServer(
+                IPAddress.Loopback,
+                port: 0,
+                inBufferSize: 2,
+                maxConcurrentClients: 1,
+                clientIdleTimeout: TimeSpan.FromMilliseconds(100));
+            using var serverCancellation = new CancellationTokenSource();
+            using var idleClient = new TcpClient();
+            server.Start();
+            var serverTask = server.AcceptAndHandleConcurrently(serverCancellation.Token);
+
+            try
+            {
+                await idleClient.ConnectAsync(IPAddress.Loopback, server.Port);
+                var buffer = new byte[1];
+
+                var readCount = await idleClient.GetStream()
+                    .ReadAsync(buffer)
+                    .AsTask()
+                    .WaitAsync(TimeSpan.FromSeconds(5));
+
+                Assert.Equal(0, readCount);
+            }
+            finally
+            {
+                await serverCancellation.CancelAsync();
+                await serverTask.WaitAsync(TimeSpan.FromSeconds(5));
+            }
         }
 
         [Fact]
@@ -119,6 +200,34 @@ namespace UnitTest.Network
             Assert.Throws<ArgumentOutOfRangeException>(() =>
             {
                 new EchoTcpServer(IPAddress.Loopback, port: 0, inBufferSize: 0);
+            });
+        }
+
+        [Fact]
+        public void Constructor_ThrowsArgumentOutOfRangeException_WhenMaxConcurrentClientsIsZero()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+            {
+                new EchoTcpServer(
+                    IPAddress.Loopback,
+                    port: 0,
+                    inBufferSize: 2,
+                    maxConcurrentClients: 0,
+                    clientIdleTimeout: TimeSpan.FromSeconds(1));
+            });
+        }
+
+        [Fact]
+        public void Constructor_ThrowsArgumentOutOfRangeException_WhenClientIdleTimeoutIsZero()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+            {
+                new EchoTcpServer(
+                    IPAddress.Loopback,
+                    port: 0,
+                    inBufferSize: 2,
+                    maxConcurrentClients: 1,
+                    clientIdleTimeout: TimeSpan.Zero);
             });
         }
     }

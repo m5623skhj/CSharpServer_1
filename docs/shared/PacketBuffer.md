@@ -33,7 +33,7 @@ Appends newly received bytes to the internal buffer.
 - Returns `false` when the header or payload is incomplete.
 - Returns `true` and outputs one payload when a complete packet is available.
 - Removes the consumed packet from the internal buffer.
-- Throws `InvalidOperationException` for negative or oversized payload lengths.
+- Throws `InvalidDataException` for negative or oversized payload lengths.
 - Reads the length header with an explicit little-endian conversion.
 
 ## Notes

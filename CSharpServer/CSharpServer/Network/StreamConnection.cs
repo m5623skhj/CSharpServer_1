@@ -43,6 +43,37 @@ namespace CSharpServer.Network
             }
         }
 
+        public async Task ReadUntilEndAsync(
+            CancellationToken cancellationToken,
+            TimeSpan idleTimeout)
+        {
+            if (idleTimeout <= TimeSpan.Zero)
+            {
+                throw new ArgumentOutOfRangeException(nameof(idleTimeout));
+            }
+
+            while (true)
+            {
+                using var idleCancellation = CancellationTokenSource.CreateLinkedTokenSource(
+                    cancellationToken);
+                idleCancellation.CancelAfter(idleTimeout);
+
+                try
+                {
+                    if (!await reader.ReadOnceAsync(idleCancellation.Token))
+                    {
+                        return;
+                    }
+                }
+                catch (OperationCanceledException)
+                    when (!cancellationToken.IsCancellationRequested
+                        && idleCancellation.IsCancellationRequested)
+                {
+                    return;
+                }
+            }
+        }
+
         public void Send(byte[] payload)
         {
             connection.Send(payload);

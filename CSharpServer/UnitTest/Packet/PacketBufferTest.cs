@@ -108,24 +108,24 @@ namespace UnitTest.Packet
         }
 
         [Fact]
-        public void TryReadPacket_ThrowsInvalidOperationException_WhenPayloadLengthIsNegative()
+        public void TryReadPacket_ThrowsInvalidDataException_WhenPayloadLengthIsNegative()
         {
             var buffer = new PacketBuffer();
             buffer.Append([0xFF, 0xFF, 0xFF, 0xFF]);
 
-            Assert.Throws<InvalidOperationException>(() =>
+            Assert.Throws<InvalidDataException>(() =>
             {
                 buffer.TryReadPacket(out _);
             });
         }
 
         [Fact]
-        public void TryReadPacket_ThrowsInvalidOperationException_WhenPayloadLengthExceedsMaxPayloadLength()
+        public void TryReadPacket_ThrowsInvalidDataException_WhenPayloadLengthExceedsMaxPayloadLength()
         {
             var buffer = new PacketBuffer(maxPayloadLength: 4);
             buffer.Append([0x05, 0x00, 0x00, 0x00]);
 
-            Assert.Throws<InvalidOperationException>(() =>
+            Assert.Throws<InvalidDataException>(() =>
             {
                 buffer.TryReadPacket(out _);
             });

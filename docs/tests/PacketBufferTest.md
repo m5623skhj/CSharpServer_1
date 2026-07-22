@@ -22,5 +22,5 @@ Verifies `PacketBuffer` behavior for complete, incomplete, and malformed packets
 - Multiple complete packets are returned in order.
 - Incomplete next packet fragments remain buffered.
 - Remaining data can complete a previously incomplete packet.
-- Negative payload length throws `InvalidOperationException`.
-- Payload length exceeding the configured maximum throws `InvalidOperationException`.
+- Negative payload length throws `InvalidDataException`.
+- Payload length exceeding the configured maximum throws `InvalidDataException`.

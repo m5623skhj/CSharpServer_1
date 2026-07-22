@@ -20,6 +20,7 @@ Starts and runs the loopback TCP echo server until cancellation is requested.
 
 - Uses a previously validated `ServerOptions` instance.
 - Creates an `EchoTcpServer` bound to `127.0.0.1` with a 4096-byte read buffer.
+- Passes the validated concurrent client limit and client idle timeout to the server.
 - Starts the listener and prints its bound endpoint.
 - Runs the open-ended concurrent accept loop.
 - Returns after cancellation stops accepting clients and active handlers finish.

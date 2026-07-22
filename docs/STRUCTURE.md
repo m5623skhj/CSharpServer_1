@@ -73,12 +73,15 @@ The network layer adapts byte streams and TCP connections into packet sessions.
 - `StreamConnectionTransport` serializes raw stream writes and close operations.
 - `StreamConnection` composes stream reader, transport, and connection.
 - `ServerOptions` validates executable arguments before listener startup.
-- `ServerApplication` owns listener startup and the cancellable executable server lifetime.
+- `ServerOptions` supplies the concurrent client limit and client idle timeout.
+- `ServerApplication` owns listener startup and passes validated resource limits to the TCP server.
 - `EchoTcpServer` accepts TCP clients and handles each as an echo stream connection.
 - `EchoTcpServer` can run either for a fixed client count or as a cancellable concurrent accept loop.
+- A semaphore bounds active client handlers, and slots are released on completion, failure, or cancellation.
+- Each asynchronous client read has a resettable idle timeout so inactive connections cannot remain indefinitely.
 - Concurrent client handlers use cancellation-aware asynchronous stream reads.
 - On cancellation, the open-ended `EchoTcpServer` loop closes active clients and waits for handler tasks to finish.
-- Client-level malformed packet and connection exceptions are isolated from the server accept loop.
+- Client-level malformed packet and connection exceptions are isolated from the server accept loop without swallowing general `InvalidOperationException` failures.
 
 ### Content Layer
 

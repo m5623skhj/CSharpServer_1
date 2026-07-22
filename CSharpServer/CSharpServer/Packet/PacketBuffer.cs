@@ -30,12 +30,12 @@ namespace CSharpServer.Packet
             var payloadLength = ReadPayloadLength();
             if (payloadLength < 0)
             {
-                throw new InvalidOperationException("Payload length cannot be negative.");
+                throw new InvalidDataException("Payload length cannot be negative.");
             }
 
             if (payloadLength > maxPayloadLength)
             {
-                throw new InvalidOperationException("Payload length exceeds max payload length.");
+                throw new InvalidDataException("Payload length exceeds max payload length.");
             }
 
             if (buffer.Count < HeaderSize + payloadLength)
