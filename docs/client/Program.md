@@ -22,7 +22,9 @@ Internal static entry class for the client process.
 - Sends one echo request asynchronously with the configured timeout covering connect, write, and read.
 - Prints the decoded echo response.
 - Returns exit code `0` after a successful response.
+- Writes expected socket, I/O, and request timeout errors to standard error without a stack trace.
+- Returns exit code `1` when an expected network error occurs.
 
 ## Notes
 
-The actual packet send/receive logic is in `EchoClient`.
+The actual packet send/receive logic is in `EchoClient`. Unexpected programming errors are not converted into network errors.

@@ -92,9 +92,15 @@ The content layer defines what to do with decoded payloads.
 The client currently exists as a test and manual verification tool.
 
 - `ClientOptions` validates command-line values and applies a total request timeout without throwing parsing exceptions.
-- `Program` prints validation errors or sends a request and prints the response.
+- Client `Program` prints validation errors, sends a request, and converts expected network failures into exit code `1`.
 - `EchoClient` connects to a TCP server, sends an encoded echo request, waits for one encoded response, and decodes it.
 - `EchoClient` applies timeout or caller cancellation across TCP connect, request write, and response read.
+
+## Process Error Boundaries
+
+- Server `Program` converts listener socket and I/O failures into concise standard-error output and exit code `1`.
+- Client `Program` converts socket, I/O, and request timeout failures into concise standard-error output and exit code `1`.
+- Unexpected programming errors remain unhandled so they are not hidden as operational network failures.
 
 ## Tests
 

@@ -22,9 +22,11 @@ Internal static entry class for the server process.
 - Registers a `Console.CancelKeyPress` handler.
 - Prevents immediate process termination when `Ctrl+C` is pressed and requests cancellation.
 - Runs `ServerApplication` asynchronously with the shutdown token.
+- Writes expected listener socket and I/O errors to standard error without a stack trace.
+- Returns exit code `1` when an expected network error occurs.
 - Removes the console event handler before exiting.
 - Returns exit code `0` after normal shutdown.
 
 ## Notes
 
-TCP listener setup is delegated to `ServerApplication`.
+TCP listener setup is delegated to `ServerApplication`. Unexpected programming errors are not converted into network errors.
