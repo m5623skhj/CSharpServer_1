@@ -38,6 +38,8 @@ Returns the bound listener port. Useful when port `0` is used in tests.
 
 Starts the TCP listener.
 
+Throws `ObjectDisposedException` if the server has already been disposed.
+
 ### `AcceptAndHandleOnce()`
 
 - Accepts one `TcpClient`.
@@ -74,9 +76,12 @@ Starts the TCP listener.
 ## Internal Behavior
 
 - Connection slots are returned from handler `finally` blocks, including failure and cancellation paths.
+- Accepted clients are tracked at server scope until their handlers complete.
+- Slot waiters are counted internally so concurrency tests can prove that a second client is actually queued.
 - Completed successful client handler tasks are pruned while the open-ended accept loop is running.
 - A faulted handler cancels the accept wait immediately, closes peer handlers, and propagates its original exception.
 - Fixed-count and open-ended modes share the same fault cancellation behavior.
+- Unexpected accept failures cancel and close active handlers before the original accept exception is propagated.
 - Concurrent handlers await `StreamConnection.ReadUntilEndAsync` without wrapping synchronous reads in `Task.Run`.
 - Concurrent echo responses use cancellation-aware asynchronous writes.
 - Expected cancellation from an active client read is handled as normal server shutdown.
@@ -85,7 +90,10 @@ Starts the TCP listener.
 
 ### `Dispose()`
 
-Stops the listener.
+- Cancels fixed-count and open-ended asynchronous accept loops.
+- Stops the listener and closes all accepted active clients.
+- Allows active handler tasks to release their connection slots and complete.
+- Is idempotent.
 
 ## Notes
 

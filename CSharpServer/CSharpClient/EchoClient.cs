@@ -94,6 +94,7 @@ public sealed class EchoClient
         catch (OperationCanceledException exception)
             when (cancellationTokenSource.IsCancellationRequested)
         {
+            stream.Close();
             throw CreateTimeoutException(exception);
         }
     }

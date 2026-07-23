@@ -51,21 +51,27 @@ namespace UnitTest.Network
         }
 
         [Fact]
-        public async Task ReadOnce_SerializesStreamReads_WhenCalledConcurrently()
+        public async Task ReadOnceAsync_SerializesStreamReads_WhenCalledConcurrently()
         {
-            using var stream = new ConcurrentReadTrackingStream();
+            using var stream = new ConcurrentAsyncReadTrackingStream();
             var receivedData = new List<byte[]>();
             var reader = new StreamConnectionReader(
                 stream,
                 inBufferSize: 8,
-                data => receivedData.Add(data.ToArray()));
-            var firstRead = Task.Run(reader.ReadOnce);
+                data => receivedData.Add(data.ToArray()),
+                (data, _) =>
+                {
+                    receivedData.Add(data.ToArray());
+                    return ValueTask.CompletedTask;
+                });
+            var firstRead = reader.ReadOnceAsync(CancellationToken.None);
 
-            Assert.True(stream.FirstReadEntered.Wait(TimeSpan.FromSeconds(1)));
+            await stream.FirstReadEntered.Task.WaitAsync(TimeSpan.FromSeconds(1));
             Assert.Equal(0, reader.AvailableReadSlotCount);
 
-            var secondRead = Task.Run(reader.ReadOnce);
-            stream.AllowFirstReadToComplete.Set();
+            var secondRead = reader.ReadOnceAsync(CancellationToken.None);
+            Assert.False(secondRead.IsCompleted);
+            stream.AllowFirstReadToComplete.TrySetResult();
             await Task.WhenAll(firstRead, secondRead);
 
             Assert.False(stream.HadOverlappingReads);
@@ -105,13 +111,15 @@ namespace UnitTest.Network
             Assert.Same(stream.ReadBuffers[0], stream.ReadBuffers[1]);
         }
 
-        private sealed class ConcurrentReadTrackingStream : Stream
+        private sealed class ConcurrentAsyncReadTrackingStream : Stream
         {
             private int activeReadCount;
             private int readCallCount;
 
-            public ManualResetEventSlim FirstReadEntered { get; } = new();
-            public ManualResetEventSlim AllowFirstReadToComplete { get; } = new();
+            public TaskCompletionSource FirstReadEntered { get; } = new(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+            public TaskCompletionSource AllowFirstReadToComplete { get; } = new(
+                TaskCreationOptions.RunContinuationsAsynchronously);
             public bool HadOverlappingReads { get; private set; }
 
             public override bool CanRead => true;
@@ -131,6 +139,13 @@ namespace UnitTest.Network
 
             public override int Read(byte[] buffer, int offset, int count)
             {
+                throw new NotSupportedException();
+            }
+
+            public override async ValueTask<int> ReadAsync(
+                Memory<byte> buffer,
+                CancellationToken cancellationToken = default)
+            {
                 if (Interlocked.Increment(ref activeReadCount) > 1)
                 {
                     HadOverlappingReads = true;
@@ -140,9 +155,9 @@ namespace UnitTest.Network
                 {
                     if (Interlocked.Increment(ref readCallCount) == 1)
                     {
-                        FirstReadEntered.Set();
-                        AllowFirstReadToComplete.Wait();
-                        buffer[offset] = 0x01;
+                        FirstReadEntered.TrySetResult();
+                        await AllowFirstReadToComplete.Task.WaitAsync(cancellationToken);
+                        buffer.Span[0] = 0x01;
                         return 1;
                     }
 

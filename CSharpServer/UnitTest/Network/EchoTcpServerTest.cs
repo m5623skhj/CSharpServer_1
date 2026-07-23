@@ -98,6 +98,68 @@ namespace UnitTest.Network
         }
 
         [Fact]
+        public async Task Dispose_ClosesActiveClientsAndCompletesAcceptLoop()
+        {
+            using var server = new EchoTcpServer(
+                IPAddress.Loopback,
+                port: 0,
+                inBufferSize: 2,
+                maxConcurrentClients: 1,
+                clientIdleTimeout: TimeSpan.FromSeconds(5));
+            using var client = new TcpClient();
+            server.Start();
+            var serverTask = server.AcceptAndHandleConcurrently(CancellationToken.None);
+
+            await client.ConnectAsync(IPAddress.Loopback, server.Port);
+            var stream = client.GetStream();
+            var packet = PacketEncoder.Encode([0x01]);
+            await stream.WriteAsync(packet);
+            var response = new byte[packet.Length];
+            await stream.ReadExactlyAsync(response);
+
+            server.Dispose();
+
+            await serverTask.WaitAsync(TimeSpan.FromSeconds(1));
+            var readCount = await stream.ReadAsync(new byte[1])
+                .AsTask()
+                .WaitAsync(TimeSpan.FromSeconds(1));
+            Assert.Equal(0, readCount);
+            Assert.Equal(0, server.ActiveClientCount);
+            Assert.Equal(1, server.AvailableClientSlotCount);
+        }
+
+        [Fact]
+        public async Task Dispose_ClosesActiveClientsAndCompletesFixedCountAcceptLoop()
+        {
+            using var server = new EchoTcpServer(
+                IPAddress.Loopback,
+                port: 0,
+                inBufferSize: 2,
+                maxConcurrentClients: 1,
+                clientIdleTimeout: TimeSpan.FromSeconds(5));
+            using var client = new TcpClient();
+            server.Start();
+            var serverTask = server.AcceptAndHandleConcurrently(clientCount: 2);
+
+            await client.ConnectAsync(IPAddress.Loopback, server.Port);
+            var stream = client.GetStream();
+            var packet = PacketEncoder.Encode([0x01]);
+            await stream.WriteAsync(packet);
+            var response = new byte[packet.Length];
+            await stream.ReadExactlyAsync(response);
+
+            server.Dispose();
+
+            await serverTask.WaitAsync(TimeSpan.FromSeconds(1));
+            var readCount = await stream.ReadAsync(new byte[1])
+                .AsTask()
+                .WaitAsync(TimeSpan.FromSeconds(1));
+            Assert.Equal(0, readCount);
+            Assert.Equal(0, server.ActiveClientCount);
+            Assert.Equal(1, server.AvailableClientSlotCount);
+        }
+
+        [Fact]
         public async Task AcceptAndHandleConcurrently_DoesNotExceedMaxConcurrentClients()
         {
             using var server = new EchoTcpServer(
@@ -122,11 +184,16 @@ namespace UnitTest.Network
                 await firstStream.ReadExactlyAsync(firstResponse);
                 Assert.Equal(1, server.ActiveClientCount);
                 Assert.Equal(0, server.AvailableClientSlotCount);
+                Assert.True(SpinWait.SpinUntil(
+                    () => server.WaitingClientSlotCount == 1,
+                    TimeSpan.FromSeconds(1)));
 
                 await secondClient.ConnectAsync(IPAddress.Loopback, server.Port);
                 var secondStream = secondClient.GetStream();
                 await secondStream.WriteAsync(packet);
                 var secondResponse = new byte[packet.Length];
+                Assert.Equal(1, server.ActiveClientCount);
+                Assert.Equal(1, server.WaitingClientSlotCount);
 
                 firstClient.Close();
                 await secondStream.ReadExactlyAsync(secondResponse)

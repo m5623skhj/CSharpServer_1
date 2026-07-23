@@ -26,7 +26,10 @@ Verifies `EchoTcpServer` and `EchoClient` integration over loopback TCP.
 - Verifies that `AcceptAndHandleConcurrently(CancellationToken)` returns after cancellation while preserving accepted client echo responses.
 - Verifies that cancellation stops an already accepted idle client's asynchronous read so the server loop can return.
 - Uses a completed echo round trip instead of an arbitrary delay to prove the client was accepted before cancellation.
-- Verifies the configured client semaphore has no available slot while one client is active and a queued client proceeds after release.
+- Verifies that disposal closes active clients and completes the open-ended accept loop.
+- Verifies that disposal cancels remaining accepts and completes the fixed-count accept loop.
+- Verifies the configured client semaphore has no available slot while one client is active.
+- Verifies that a second client is actually waiting for a slot before the first client is released.
 - Verifies that an idle client is closed after its configured timeout.
 - Verifies that an unexpected client handler fault stops accept processing and propagates immediately.
 - Verifies that fixed-count mode propagates a handler fault without waiting for the remaining clients to connect.

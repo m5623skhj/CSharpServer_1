@@ -37,6 +37,18 @@ namespace UnitTest.Client
         }
 
         [Theory]
+        [InlineData("")]
+        [InlineData(" ")]
+        public void TryParse_ReturnsUsageError_WhenHostIsEmpty(string host)
+        {
+            var result = ClientOptions.TryParse([host], out var options, out var error);
+
+            Assert.False(result);
+            Assert.Null(options);
+            Assert.Contains(ClientOptions.Usage, error);
+        }
+
+        [Theory]
         [InlineData("invalid")]
         [InlineData("0")]
         [InlineData("65536")]

@@ -82,33 +82,46 @@ namespace UnitTest.Session
         }
 
         [Fact]
-        public async Task Receive_SerializesPacketHandlers_WhenCalledConcurrently()
+        public async Task ReceiveAsync_SerializesPacketHandlers_WhenCalledConcurrently()
         {
-            var handler = new ConcurrentPacketHandler();
-            var session = new NetworkSession(handler.Handle);
-            var firstReceive = Task.Run(() => session.Receive(PacketEncoder.Encode([0x01])));
+            var handler = new ConcurrentAsyncPacketHandler();
+            var session = new NetworkSession(
+                _ => { },
+                _ => { },
+                handler.HandleAsync,
+                (_, _) => ValueTask.CompletedTask);
+            var firstReceive = session.ReceiveAsync(
+                PacketEncoder.Encode([0x01]),
+                CancellationToken.None).AsTask();
 
-            Assert.True(handler.FirstHandlerEntered.Wait(TimeSpan.FromSeconds(1)));
+            await handler.FirstHandlerEntered.Task.WaitAsync(TimeSpan.FromSeconds(1));
             Assert.Equal(0, session.AvailableReceiveSlotCount);
 
-            var secondReceive = Task.Run(() => session.Receive(PacketEncoder.Encode([0x02])));
-            handler.AllowFirstHandlerToComplete.Set();
+            var secondReceive = session.ReceiveAsync(
+                PacketEncoder.Encode([0x02]),
+                CancellationToken.None).AsTask();
+            Assert.False(secondReceive.IsCompleted);
+            handler.AllowFirstHandlerToComplete.TrySetResult();
             await Task.WhenAll(firstReceive, secondReceive);
 
             Assert.False(handler.HadOverlappingHandlers);
             Assert.Equal(1, session.AvailableReceiveSlotCount);
         }
 
-        private sealed class ConcurrentPacketHandler
+        private sealed class ConcurrentAsyncPacketHandler
         {
             private int activeHandlerCount;
             private int handlerInvocationCount;
 
-            public ManualResetEventSlim FirstHandlerEntered { get; } = new();
-            public ManualResetEventSlim AllowFirstHandlerToComplete { get; } = new();
+            public TaskCompletionSource FirstHandlerEntered { get; } = new(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+            public TaskCompletionSource AllowFirstHandlerToComplete { get; } = new(
+                TaskCreationOptions.RunContinuationsAsynchronously);
             public bool HadOverlappingHandlers { get; private set; }
 
-            public void Handle(byte[] payload)
+            public async ValueTask HandleAsync(
+                byte[] payload,
+                CancellationToken cancellationToken)
             {
                 if (Interlocked.Increment(ref activeHandlerCount) > 1)
                 {
@@ -119,8 +132,8 @@ namespace UnitTest.Session
                 {
                     if (Interlocked.Increment(ref handlerInvocationCount) == 1)
                     {
-                        FirstHandlerEntered.Set();
-                        AllowFirstHandlerToComplete.Wait();
+                        FirstHandlerEntered.TrySetResult();
+                        await AllowFirstHandlerToComplete.Task.WaitAsync(cancellationToken);
                     }
                 }
                 finally

@@ -49,6 +49,7 @@ namespace UnitTest.Client
             Assert.Equal(
                 PacketEncoder.Encode(Encoding.UTF8.GetBytes("hello")),
                 stream.WrittenData);
+            Assert.True(stream.IsDisposed);
         }
 
         [Fact]
@@ -187,6 +188,7 @@ namespace UnitTest.Client
             private readonly MemoryStream writeStream = new();
 
             public byte[] WrittenData => writeStream.ToArray();
+            public bool IsDisposed { get; private set; }
 
             public override bool CanRead => true;
             public override bool CanSeek => false;
@@ -243,6 +245,7 @@ namespace UnitTest.Client
             {
                 if (disposing)
                 {
+                    IsDisposed = true;
                     writeStream.Dispose();
                 }
 

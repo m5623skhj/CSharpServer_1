@@ -41,6 +41,12 @@ public sealed class ClientOptions
         }
 
         var host = args.Length > 0 ? args[0] : DefaultHost;
+        if (string.IsNullOrWhiteSpace(host))
+        {
+            error = $"Host cannot be empty.{Environment.NewLine}{Usage}";
+            return false;
+        }
+
         var port = DefaultPort;
         if (args.Length > 1
             && (!int.TryParse(args[1], out port) || port is < 1 or > 65535))

@@ -22,6 +22,7 @@ Test-only result record containing a child process exit code, standard output, a
 
 - An invalid server port returns exit code `1` and writes server usage text to standard error.
 - An invalid client port returns exit code `1` and writes client usage text to standard error.
+- An empty client host returns exit code `1` and usage text without an unhandled exception.
 - A server bind failure returns exit code `1` and writes a concise network error to standard error.
 - A client request timeout returns exit code `1` and writes a concise network error to standard error.
 - A server close before response returns exit code `1` without an unhandled exception.

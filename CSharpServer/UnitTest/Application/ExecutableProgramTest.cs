@@ -35,6 +35,19 @@ namespace UnitTest.Application
         }
 
         [Fact]
+        public async Task Client_ReturnsUsageErrorAndExitCodeOne_WhenHostIsEmpty()
+        {
+            var result = await RunExecutableAsync(
+                "CSharpClient.dll",
+                string.Empty);
+
+            Assert.Equal(1, result.ExitCode);
+            Assert.Contains(ClientOptions.Usage, result.StandardError);
+            Assert.DoesNotContain("Unhandled exception", result.StandardError);
+            Assert.Empty(result.StandardOutput);
+        }
+
+        [Fact]
         public async Task Server_ReturnsNetworkErrorAndExitCodeOne_WhenPortIsAlreadyInUse()
         {
             using var listener = new TcpListener(IPAddress.Loopback, 0);

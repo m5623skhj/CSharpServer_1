@@ -52,6 +52,7 @@ Sends a length-prefixed echo request and reads one length-prefixed response.
 - Encodes and writes one echo request packet asynchronously.
 - Reads one response packet asynchronously.
 - Cancels the wait when the timeout expires.
+- Closes the supplied stream after timeout because a partial or late response cannot be safely correlated with a later request.
 - Returns the response as a UTF-8 string.
 
 ## Failure Behavior
@@ -61,5 +62,7 @@ Throws `EndOfStreamException` if the stream closes before a complete response pa
 Throws `InvalidDataException` when a response contains an invalid packet length.
 
 The TimeSpan overloads throw `TimeoutException` if the complete request does not finish before the configured timeout.
+
+Caller-owned streams must be treated as unusable after a request timeout. The client closes them to enforce this protocol boundary.
 
 Async internals avoid synchronization-context capture so synchronous wrappers do not deadlock UI or test contexts.

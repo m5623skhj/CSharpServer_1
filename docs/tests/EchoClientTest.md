@@ -20,7 +20,7 @@ Test-only stream that supplies scripted read bytes and records written bytes.
 
 ### `WaitingReadStream`
 
-Test-only stream that records writes and keeps async reads pending until cancellation.
+Test-only stream that records writes, keeps async reads pending until cancellation, and records disposal.
 
 ## Test Coverage
 
@@ -29,5 +29,6 @@ Test-only stream that records writes and keeps async reads pending until cancell
 - `SendEchoRequest` throws `EndOfStreamException` when the stream closes before a response is received.
 - The synchronous stream overload throws `TimeoutException` when the request does not complete.
 - `SendEchoRequestAsync` throws `TimeoutException` when the complete request does not finish before the timeout.
+- A timed-out stream request closes the stream so it cannot be reused with corrupted protocol state.
 - The host/port async overload throws `TimeoutException` when a connected server receives the request but does not respond.
 - The host/port cancellation overload propagates cancellation during TCP connection.

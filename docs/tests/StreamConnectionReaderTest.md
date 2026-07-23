@@ -14,9 +14,9 @@ Tests single-read stream reader behavior.
 
 Verifies `StreamConnectionReader.ReadOnce`.
 
-### `ConcurrentReadTrackingStream`
+### `ConcurrentAsyncReadTrackingStream`
 
-Test-only stream that detects overlapping read calls while coordinating two reader tasks.
+Test-only async stream that blocks the first read and detects overlapping read calls.
 
 ### `CancellationAwareReadStream`
 
@@ -31,7 +31,8 @@ Test-only stream that records the backing array supplied to each async read.
 - When bytes are read, `ReadOnce` calls the handler and returns `true`.
 - When EOF is reached, `ReadOnce` does not call the handler and returns `false`.
 - Zero buffer size is rejected by the constructor.
-- Concurrent `ReadOnce` calls do not overlap stream reads.
-- Concurrent reads verify the semaphore slot is held during the first read and restored after completion.
+- Concurrent `ReadOnceAsync` calls do not overlap stream reads.
+- The second async read remains incomplete while the first read owns the semaphore slot.
+- Concurrent reads verify the semaphore slot is restored after completion.
 - `ReadOnceAsync` stops waiting and propagates cancellation without invoking the data handler.
 - Repeated async reads reuse the same backing buffer.
