@@ -52,6 +52,19 @@ namespace UnitTest.Client
         }
 
         [Fact]
+        public void SendEchoRequest_ThrowsTimeoutException_WhenRequestDoesNotCompleteBeforeTimeout()
+        {
+            using var stream = new WaitingReadStream();
+            var client = new EchoClient();
+
+            Assert.Throws<TimeoutException>(() =>
+                client.SendEchoRequest(
+                    stream,
+                    "hello",
+                    TimeSpan.FromMilliseconds(50)));
+        }
+
+        [Fact]
         public async Task SendEchoRequestAsync_WithHostAndPort_ThrowsTimeoutException_WhenServerDoesNotRespond()
         {
             var listener = new TcpListener(IPAddress.Loopback, 0);

@@ -30,6 +30,7 @@ Test-only stream that keeps an async write pending until cancellation.
 
 - `Send` writes raw data to the stream.
 - `SendAsync` propagates cancellation to the stream write.
+- Concurrent async sends verify semaphore occupancy, ordered completion, and non-overlapping writes.
 - `Close` closes the stream.
 - Repeated `Close` calls close the stream only once.
 - `Close` returns without waiting for a blocked send and interrupts that send through stream disposal.

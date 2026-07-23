@@ -45,6 +45,8 @@ namespace CSharpServer.Network
             this.asyncPacketSender = asyncPacketSender;
         }
 
+        internal int AvailableReceiveSlotCount => receiveSemaphore.CurrentCount;
+
         public void Receive(byte[] data)
         {
             Receive((ReadOnlyMemory<byte>)data);

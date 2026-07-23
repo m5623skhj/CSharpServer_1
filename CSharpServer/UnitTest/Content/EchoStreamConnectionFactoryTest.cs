@@ -22,26 +22,21 @@ namespace UnitTest.Content
         }
 
         [Fact]
-        public async Task Create_SerializesEchoAndConnectionSendWrites()
+        public void Create_UsesSameStreamForEchoAndConnectionSend()
         {
             var encodedPacket = PacketEncoder.Encode([0x01]);
-            using var stream = new ConcurrentWriteTrackingStream(encodedPacket);
+            var sentPacket = PacketEncoder.Encode([0x02]);
+            using var stream = new MemoryStream();
+            stream.Write(encodedPacket);
+            stream.Position = 0;
             var connection = EchoStreamConnectionFactory.Create(stream, inBufferSize: 16);
-            var echoTask = Task.Run(connection.ReadOnce);
 
-            await stream.FirstWriteStarted.Task.WaitAsync(TimeSpan.FromSeconds(1));
+            connection.ReadOnce();
+            connection.Send([0x02]);
 
-            var sendTask = Task.Run(() =>
-            {
-                stream.SecondWriteRequested.TrySetResult();
-                connection.Send([0x02]);
-            });
-
-            await stream.SecondWriteRequested.Task.WaitAsync(TimeSpan.FromSeconds(1));
-            stream.AllowFirstWriteToComplete.Set();
-            await Task.WhenAll(echoTask, sendTask);
-
-            Assert.False(stream.HadOverlappingWrites);
+            Assert.Equal(
+                encodedPacket.Concat(encodedPacket).Concat(sentPacket),
+                stream.ToArray());
         }
 
         [Fact]
@@ -54,87 +49,6 @@ namespace UnitTest.Content
             await connection.ReadUntilEndAsync(CancellationToken.None);
 
             Assert.Equal(encodedPacket, stream.WrittenData);
-        }
-
-        private sealed class ConcurrentWriteTrackingStream : Stream
-        {
-            private readonly MemoryStream readStream;
-            private int activeWriteCount;
-            private int writeCallCount;
-
-            public ConcurrentWriteTrackingStream(byte[] readData)
-            {
-                readStream = new MemoryStream(readData);
-            }
-
-            public TaskCompletionSource FirstWriteStarted { get; } = new(
-                TaskCreationOptions.RunContinuationsAsynchronously);
-            public ManualResetEventSlim AllowFirstWriteToComplete { get; } = new();
-            public TaskCompletionSource SecondWriteRequested { get; } = new(
-                TaskCreationOptions.RunContinuationsAsynchronously);
-            public bool HadOverlappingWrites { get; private set; }
-
-            public override bool CanRead => true;
-            public override bool CanSeek => false;
-            public override bool CanWrite => true;
-            public override long Length => throw new NotSupportedException();
-
-            public override long Position
-            {
-                get => throw new NotSupportedException();
-                set => throw new NotSupportedException();
-            }
-
-            public override void Flush()
-            {
-            }
-
-            public override int Read(byte[] buffer, int offset, int count)
-            {
-                return readStream.Read(buffer, offset, count);
-            }
-
-            public override long Seek(long offset, SeekOrigin origin)
-            {
-                throw new NotSupportedException();
-            }
-
-            public override void SetLength(long value)
-            {
-                throw new NotSupportedException();
-            }
-
-            public override void Write(byte[] buffer, int offset, int count)
-            {
-                if (Interlocked.Increment(ref activeWriteCount) > 1)
-                {
-                    HadOverlappingWrites = true;
-                }
-
-                try
-                {
-                    if (Interlocked.Increment(ref writeCallCount) == 1)
-                    {
-                        FirstWriteStarted.TrySetResult();
-                        SecondWriteRequested.Task.GetAwaiter().GetResult();
-                        AllowFirstWriteToComplete.Wait();
-                    }
-                }
-                finally
-                {
-                    Interlocked.Decrement(ref activeWriteCount);
-                }
-            }
-
-            protected override void Dispose(bool disposing)
-            {
-                if (disposing)
-                {
-                    readStream.Dispose();
-                }
-
-                base.Dispose(disposing);
-            }
         }
 
         private sealed class AsyncEchoStream : Stream

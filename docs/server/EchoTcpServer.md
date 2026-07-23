@@ -57,6 +57,8 @@ Starts the TCP listener.
 - Accepts the configured number of clients.
 - Acquires a connection slot before accepting each client.
 - Handles accepted clients with asynchronous stream reads up to the configured limit.
+- Cancels remaining accepts and closes peer clients when a handler faults.
+- Propagates a handler fault without waiting for the remaining client count to connect.
 - Waits for all client handler tasks to complete.
 
 ### `AcceptAndHandleConcurrently(CancellationToken cancellationToken)`
@@ -74,6 +76,7 @@ Starts the TCP listener.
 - Connection slots are returned from handler `finally` blocks, including failure and cancellation paths.
 - Completed successful client handler tasks are pruned while the open-ended accept loop is running.
 - A faulted handler cancels the accept wait immediately, closes peer handlers, and propagates its original exception.
+- Fixed-count and open-ended modes share the same fault cancellation behavior.
 - Concurrent handlers await `StreamConnection.ReadUntilEndAsync` without wrapping synchronous reads in `Task.Run`.
 - Concurrent echo responses use cancellation-aware asynchronous writes.
 - Expected cancellation from an active client read is handled as normal server shutdown.

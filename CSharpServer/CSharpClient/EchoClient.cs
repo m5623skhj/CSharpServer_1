@@ -7,14 +7,23 @@ namespace CSharpClient;
 public sealed class EchoClient
 {
     private const int ReceiveBufferSize = 4096;
+    private static readonly TimeSpan DefaultRequestTimeout = TimeSpan.FromSeconds(5);
 
     public string SendEchoRequest(string host, int port, string message)
     {
-        using var client = new TcpClient();
-        client.Connect(host, port);
+        return SendEchoRequest(host, port, message, DefaultRequestTimeout);
+    }
 
-        using var stream = client.GetStream();
-        return SendEchoRequest(stream, message);
+    public string SendEchoRequest(
+        string host,
+        int port,
+        string message,
+        TimeSpan requestTimeout)
+    {
+        return SendEchoRequestAsync(host, port, message, requestTimeout)
+            .ConfigureAwait(false)
+            .GetAwaiter()
+            .GetResult();
     }
 
     public async Task<string> SendEchoRequestAsync(
@@ -33,7 +42,7 @@ public sealed class EchoClient
                 host,
                 port,
                 message,
-                cancellationTokenSource.Token);
+                cancellationTokenSource.Token).ConfigureAwait(false);
         }
         catch (OperationCanceledException exception)
             when (cancellationTokenSource.IsCancellationRequested)
@@ -49,22 +58,24 @@ public sealed class EchoClient
         CancellationToken cancellationToken)
     {
         using var client = new TcpClient();
-        await client.ConnectAsync(host, port, cancellationToken);
+        await client.ConnectAsync(host, port, cancellationToken).ConfigureAwait(false);
 
         await using var stream = client.GetStream();
-        return await SendEchoRequestAsyncCore(stream, message, cancellationToken);
+        return await SendEchoRequestAsyncCore(stream, message, cancellationToken)
+            .ConfigureAwait(false);
     }
 
     public string SendEchoRequest(Stream stream, string message)
     {
-        var payload = Encoding.UTF8.GetBytes(message);
-        var packet = PacketEncoder.Encode(payload);
+        return SendEchoRequest(stream, message, DefaultRequestTimeout);
+    }
 
-        stream.Write(packet);
-
-        var responsePayload = ReadResponsePayload(stream);
-
-        return Encoding.UTF8.GetString(responsePayload);
+    public string SendEchoRequest(Stream stream, string message, TimeSpan requestTimeout)
+    {
+        return SendEchoRequestAsync(stream, message, requestTimeout)
+            .ConfigureAwait(false)
+            .GetAwaiter()
+            .GetResult();
     }
 
     public async Task<string> SendEchoRequestAsync(Stream stream, string message, TimeSpan requestTimeout)
@@ -78,7 +89,7 @@ public sealed class EchoClient
             return await SendEchoRequestAsyncCore(
                 stream,
                 message,
-                cancellationTokenSource.Token);
+                cancellationTokenSource.Token).ConfigureAwait(false);
         }
         catch (OperationCanceledException exception)
             when (cancellationTokenSource.IsCancellationRequested)
@@ -95,9 +106,10 @@ public sealed class EchoClient
         var payload = Encoding.UTF8.GetBytes(message);
         var packet = PacketEncoder.Encode(payload);
 
-        await stream.WriteAsync(packet, cancellationToken);
+        await stream.WriteAsync(packet, cancellationToken).ConfigureAwait(false);
 
-        var responsePayload = await ReadResponsePayloadAsync(stream, cancellationToken);
+        var responsePayload = await ReadResponsePayloadAsync(stream, cancellationToken)
+            .ConfigureAwait(false);
 
         return Encoding.UTF8.GetString(responsePayload);
     }
@@ -115,28 +127,6 @@ public sealed class EchoClient
         return new TimeoutException("Echo request did not complete before timeout.", exception);
     }
 
-    private static byte[] ReadResponsePayload(Stream stream)
-    {
-        var packetBuffer = new PacketBuffer();
-        var receiveBuffer = new byte[ReceiveBufferSize];
-
-        while (true)
-        {
-            var readCount = stream.Read(receiveBuffer);
-            if (readCount == 0)
-            {
-                throw new EndOfStreamException(
-                    "Connection closed before echo response was received.");
-            }
-
-            packetBuffer.Append(receiveBuffer.AsSpan(0, readCount));
-            if (packetBuffer.TryReadPacket(out var responsePayload) && responsePayload is not null)
-            {
-                return responsePayload;
-            }
-        }
-    }
-
     private static async Task<byte[]> ReadResponsePayloadAsync(Stream stream, CancellationToken cancellationToken)
     {
         var packetBuffer = new PacketBuffer();
@@ -144,7 +134,8 @@ public sealed class EchoClient
 
         while (true)
         {
-            var readCount = await stream.ReadAsync(receiveBuffer, cancellationToken);
+            var readCount = await stream.ReadAsync(receiveBuffer, cancellationToken)
+                .ConfigureAwait(false);
             if (readCount == 0)
             {
                 throw new EndOfStreamException(

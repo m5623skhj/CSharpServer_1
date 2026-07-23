@@ -81,6 +81,7 @@ The network layer adapts byte streams and TCP connections into packet sessions.
 - `EchoTcpServer` can run either for a fixed client count or as a cancellable concurrent accept loop.
 - A semaphore bounds active client handlers, and slots are released on completion, failure, or cancellation.
 - Faulted handlers cancel the accept loop immediately and propagate their original exception.
+- Fixed-count mode also cancels remaining accepts instead of waiting for the configured count after a handler fault.
 - Each asynchronous client read has a resettable idle timeout so inactive connections cannot remain indefinitely.
 - Concurrent client handlers use cancellation-aware asynchronous stream reads.
 - On cancellation, the open-ended `EchoTcpServer` loop closes active clients and waits for handler tasks to finish.
@@ -101,6 +102,7 @@ The client currently exists as a test and manual verification tool.
 - Client `Program` prints validation errors, sends a request, and converts expected network or protocol failures into exit code `1`.
 - `EchoClient` connects to a TCP server, sends an encoded echo request, waits for one encoded response, and decodes it.
 - `EchoClient` applies timeout or caller cancellation across TCP connect, request write, and response read.
+- Synchronous client methods reuse the async request path with a default or caller-supplied timeout.
 
 ## Process Error Boundaries
 

@@ -38,6 +38,8 @@ namespace CSharpServer.Network
             this.asyncDataHandler = asyncDataHandler;
         }
 
+        internal int AvailableReadSlotCount => readSemaphore.CurrentCount;
+
         public bool ReadOnce()
         {
             readSemaphore.Wait();

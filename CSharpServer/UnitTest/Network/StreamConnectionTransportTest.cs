@@ -33,6 +33,27 @@ namespace UnitTest.Network
         }
 
         [Fact]
+        public async Task SendAsync_SerializesConcurrentWrites()
+        {
+            using var stream = new ConcurrentAsyncWriteStream();
+            var transport = new StreamConnectionTransport(stream);
+            var firstSend = transport.SendAsync(new byte[] { 0x01 }, CancellationToken.None)
+                .AsTask();
+
+            await stream.FirstWriteStarted.Task.WaitAsync(TimeSpan.FromSeconds(1));
+            Assert.Equal(0, transport.AvailableSendSlotCount);
+
+            var secondSend = transport.SendAsync(new byte[] { 0x02 }, CancellationToken.None)
+                .AsTask();
+            Assert.False(secondSend.IsCompleted);
+            stream.AllowFirstWriteToComplete.TrySetResult();
+
+            await Task.WhenAll(firstSend, secondSend);
+            Assert.False(stream.HadOverlappingWrites);
+            Assert.Equal(1, transport.AvailableSendSlotCount);
+        }
+
+        [Fact]
         public void Close_ClosesStream()
         {
             using var stream = new TrackingStream();
@@ -142,6 +163,66 @@ namespace UnitTest.Network
             {
                 WriteStarted.TrySetResult();
                 await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+            }
+        }
+
+        private sealed class ConcurrentAsyncWriteStream : Stream
+        {
+            private int activeWriteCount;
+            private int writeCount;
+
+            public TaskCompletionSource FirstWriteStarted { get; } = new(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+            public TaskCompletionSource AllowFirstWriteToComplete { get; } = new(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+            public bool HadOverlappingWrites { get; private set; }
+
+            public override bool CanRead => false;
+            public override bool CanSeek => false;
+            public override bool CanWrite => true;
+            public override long Length => throw new NotSupportedException();
+            public override long Position
+            {
+                get => throw new NotSupportedException();
+                set => throw new NotSupportedException();
+            }
+
+            public override void Flush()
+            {
+            }
+
+            public override int Read(byte[] buffer, int offset, int count) =>
+                throw new NotSupportedException();
+
+            public override long Seek(long offset, SeekOrigin origin) =>
+                throw new NotSupportedException();
+
+            public override void SetLength(long value) => throw new NotSupportedException();
+
+            public override void Write(byte[] buffer, int offset, int count) =>
+                throw new NotSupportedException();
+
+            public override async ValueTask WriteAsync(
+                ReadOnlyMemory<byte> buffer,
+                CancellationToken cancellationToken = default)
+            {
+                if (Interlocked.Increment(ref activeWriteCount) > 1)
+                {
+                    HadOverlappingWrites = true;
+                }
+
+                try
+                {
+                    if (Interlocked.Increment(ref writeCount) == 1)
+                    {
+                        FirstWriteStarted.TrySetResult();
+                        await AllowFirstWriteToComplete.Task.WaitAsync(cancellationToken);
+                    }
+                }
+                finally
+                {
+                    Interlocked.Decrement(ref activeWriteCount);
+                }
             }
         }
     }

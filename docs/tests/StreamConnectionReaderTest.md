@@ -32,6 +32,6 @@ Test-only stream that records the backing array supplied to each async read.
 - When EOF is reached, `ReadOnce` does not call the handler and returns `false`.
 - Zero buffer size is rejected by the constructor.
 - Concurrent `ReadOnce` calls do not overlap stream reads.
-- Concurrent read coordination uses explicit request and release signals rather than elapsed-time assertions.
+- Concurrent reads verify the semaphore slot is held during the first read and restored after completion.
 - `ReadOnceAsync` stops waiting and propagates cancellation without invoking the data handler.
 - Repeated async reads reuse the same backing buffer.

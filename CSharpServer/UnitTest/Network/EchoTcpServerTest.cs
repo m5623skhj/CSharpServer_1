@@ -121,13 +121,13 @@ namespace UnitTest.Network
                 var firstResponse = new byte[packet.Length];
                 await firstStream.ReadExactlyAsync(firstResponse);
                 Assert.Equal(1, server.ActiveClientCount);
+                Assert.Equal(0, server.AvailableClientSlotCount);
 
                 await secondClient.ConnectAsync(IPAddress.Loopback, server.Port);
                 var secondStream = secondClient.GetStream();
                 await secondStream.WriteAsync(packet);
                 var secondResponse = new byte[packet.Length];
 
-                Assert.Equal(1, server.ActiveClientCount);
                 firstClient.Close();
                 await secondStream.ReadExactlyAsync(secondResponse)
                     .AsTask()
@@ -191,6 +191,28 @@ namespace UnitTest.Network
             using var client = new TcpClient();
             server.Start();
             var serverTask = server.AcceptAndHandleConcurrently(cancellationTokenSource.Token);
+
+            await client.ConnectAsync(IPAddress.Loopback, server.Port);
+
+            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                serverTask.WaitAsync(TimeSpan.FromSeconds(1)));
+            Assert.Equal("handler failed", exception.Message);
+        }
+
+        [Fact]
+        public async Task AcceptAndHandleConcurrently_WithClientCount_PropagatesHandlerFailureBeforeRemainingAccepts()
+        {
+            using var server = new EchoTcpServer(
+                IPAddress.Loopback,
+                port: 0,
+                inBufferSize: 2,
+                maxConcurrentClients: 2,
+                clientIdleTimeout: TimeSpan.FromSeconds(5),
+                clientHandler: (_, _) => Task.FromException(
+                    new InvalidOperationException("handler failed")));
+            using var client = new TcpClient();
+            server.Start();
+            var serverTask = server.AcceptAndHandleConcurrently(clientCount: 2);
 
             await client.ConnectAsync(IPAddress.Loopback, server.Port);
 

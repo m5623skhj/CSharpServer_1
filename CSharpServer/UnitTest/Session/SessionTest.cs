@@ -89,17 +89,14 @@ namespace UnitTest.Session
             var firstReceive = Task.Run(() => session.Receive(PacketEncoder.Encode([0x01])));
 
             Assert.True(handler.FirstHandlerEntered.Wait(TimeSpan.FromSeconds(1)));
+            Assert.Equal(0, session.AvailableReceiveSlotCount);
 
-            var secondReceive = Task.Run(() =>
-            {
-                handler.SecondReceiveRequested.TrySetResult();
-                session.Receive(PacketEncoder.Encode([0x02]));
-            });
-            await handler.SecondReceiveRequested.Task.WaitAsync(TimeSpan.FromSeconds(1));
+            var secondReceive = Task.Run(() => session.Receive(PacketEncoder.Encode([0x02])));
             handler.AllowFirstHandlerToComplete.Set();
             await Task.WhenAll(firstReceive, secondReceive);
 
             Assert.False(handler.HadOverlappingHandlers);
+            Assert.Equal(1, session.AvailableReceiveSlotCount);
         }
 
         private sealed class ConcurrentPacketHandler
@@ -108,8 +105,6 @@ namespace UnitTest.Session
             private int handlerInvocationCount;
 
             public ManualResetEventSlim FirstHandlerEntered { get; } = new();
-            public TaskCompletionSource SecondReceiveRequested { get; } = new(
-                TaskCreationOptions.RunContinuationsAsynchronously);
             public ManualResetEventSlim AllowFirstHandlerToComplete { get; } = new();
             public bool HadOverlappingHandlers { get; private set; }
 
@@ -125,7 +120,6 @@ namespace UnitTest.Session
                     if (Interlocked.Increment(ref handlerInvocationCount) == 1)
                     {
                         FirstHandlerEntered.Set();
-                        SecondReceiveRequested.Task.GetAwaiter().GetResult();
                         AllowFirstHandlerToComplete.Wait();
                     }
                 }

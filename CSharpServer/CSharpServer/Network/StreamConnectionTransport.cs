@@ -12,6 +12,8 @@ namespace CSharpServer.Network
             this.stream = stream;
         }
 
+        internal int AvailableSendSlotCount => sendSemaphore.CurrentCount;
+
         public void Send(byte[] data)
         {
             sendSemaphore.Wait();

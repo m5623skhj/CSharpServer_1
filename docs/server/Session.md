@@ -43,3 +43,5 @@ Encodes the payload and sends it through the asynchronous packet sender.
 Sync and async receive calls share one semaphore to protect packet buffer state and handler order.
 
 `Send` synchronization depends on the configured packet sender. Server connections use the thread-safe `StreamConnectionTransport` sender.
+
+The test assembly can inspect the internal available receive slot count for deterministic serialization checks.

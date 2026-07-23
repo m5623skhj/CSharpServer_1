@@ -39,3 +39,5 @@ Reads from a `Stream` and forwards read bytes to a data handler.
 ## Notes
 
 Synchronous and asynchronous calls share one `SemaphoreSlim`. Public callbacks receive an independent byte array for compatibility; the internal server pipeline consumes borrowed `ReadOnlyMemory<byte>` before the next read.
+
+The test assembly can inspect the internal available read slot count without adding a public runtime API.

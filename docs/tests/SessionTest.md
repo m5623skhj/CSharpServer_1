@@ -26,4 +26,4 @@ Test-only handler that detects whether two packet callbacks execute at the same 
 - `Send` encodes payloads before invoking the sender.
 - One session's sent packet can be received by another session.
 - Concurrent receive calls do not execute packet handlers at the same time.
-- Concurrent receive coordination uses explicit request and release signals rather than a fixed delay.
+- Concurrent receives verify the semaphore slot is held during the first handler and restored afterward.

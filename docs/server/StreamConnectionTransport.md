@@ -39,3 +39,5 @@ Repeated close calls have no effect.
 ## Notes
 
 Sync and async sends share one semaphore. Close uses a separate state lock so it can interrupt a blocked stream write.
+
+The test assembly can inspect the internal available send slot count for deterministic serialization checks.

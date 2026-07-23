@@ -62,18 +62,15 @@ namespace UnitTest.Network
             var firstRead = Task.Run(reader.ReadOnce);
 
             Assert.True(stream.FirstReadEntered.Wait(TimeSpan.FromSeconds(1)));
+            Assert.Equal(0, reader.AvailableReadSlotCount);
 
-            var secondRead = Task.Run(() =>
-            {
-                stream.SecondReadRequested.TrySetResult();
-                return reader.ReadOnce();
-            });
-            await stream.SecondReadRequested.Task.WaitAsync(TimeSpan.FromSeconds(1));
+            var secondRead = Task.Run(reader.ReadOnce);
             stream.AllowFirstReadToComplete.Set();
             await Task.WhenAll(firstRead, secondRead);
 
             Assert.False(stream.HadOverlappingReads);
             Assert.Single(receivedData);
+            Assert.Equal(1, reader.AvailableReadSlotCount);
         }
 
         [Fact]
@@ -114,8 +111,6 @@ namespace UnitTest.Network
             private int readCallCount;
 
             public ManualResetEventSlim FirstReadEntered { get; } = new();
-            public TaskCompletionSource SecondReadRequested { get; } = new(
-                TaskCreationOptions.RunContinuationsAsynchronously);
             public ManualResetEventSlim AllowFirstReadToComplete { get; } = new();
             public bool HadOverlappingReads { get; private set; }
 
@@ -146,7 +141,6 @@ namespace UnitTest.Network
                     if (Interlocked.Increment(ref readCallCount) == 1)
                     {
                         FirstReadEntered.Set();
-                        SecondReadRequested.Task.GetAwaiter().GetResult();
                         AllowFirstReadToComplete.Wait();
                         buffer[offset] = 0x01;
                         return 1;
