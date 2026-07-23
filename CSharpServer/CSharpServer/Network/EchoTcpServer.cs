@@ -10,6 +10,8 @@ namespace CSharpServer.Network
         private readonly int bufferSize;
         private readonly TimeSpan clientIdleTimeout;
         private readonly SemaphoreSlim clientSlots;
+        private readonly Func<TcpClient, CancellationToken, Task> clientHandler;
+        private int activeClientCount;
 
         public EchoTcpServer(IPAddress ipAddress, int port, int inBufferSize)
             : this(
@@ -27,6 +29,23 @@ namespace CSharpServer.Network
             int inBufferSize,
             int maxConcurrentClients,
             TimeSpan clientIdleTimeout)
+            : this(
+                ipAddress,
+                port,
+                inBufferSize,
+                maxConcurrentClients,
+                clientIdleTimeout,
+                clientHandler: null)
+        {
+        }
+
+        internal EchoTcpServer(
+            IPAddress ipAddress,
+            int port,
+            int inBufferSize,
+            int maxConcurrentClients,
+            TimeSpan clientIdleTimeout,
+            Func<TcpClient, CancellationToken, Task>? clientHandler)
         {
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(inBufferSize);
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxConcurrentClients);
@@ -39,9 +58,11 @@ namespace CSharpServer.Network
             bufferSize = inBufferSize;
             this.clientIdleTimeout = clientIdleTimeout;
             clientSlots = new SemaphoreSlim(maxConcurrentClients, maxConcurrentClients);
+            this.clientHandler = clientHandler ?? HandleClientAsync;
         }
 
         public int Port => ((IPEndPoint)listener.LocalEndpoint).Port;
+        internal int ActiveClientCount => Volatile.Read(ref activeClientCount);
 
         public void Start()
         {
@@ -88,34 +109,46 @@ namespace CSharpServer.Network
 
         public async Task AcceptAndHandleConcurrently(CancellationToken cancellationToken)
         {
+            using var acceptCancellation = CancellationTokenSource.CreateLinkedTokenSource(
+                cancellationToken);
             var clientTasks = new List<Task>();
             var activeClients = new List<TcpClient>();
             var activeClientsLock = new object();
 
-            while (!cancellationToken.IsCancellationRequested)
+            while (!acceptCancellation.IsCancellationRequested)
             {
                 var slotAcquired = false;
                 TcpClient? acceptedClient = null;
                 try
                 {
                     PruneCompletedClientTasks(clientTasks);
-                    await clientSlots.WaitAsync(cancellationToken);
+                    await clientSlots.WaitAsync(acceptCancellation.Token);
                     slotAcquired = true;
-                    acceptedClient = await listener.AcceptTcpClientAsync(cancellationToken);
+                    acceptedClient = await listener.AcceptTcpClientAsync(
+                        acceptCancellation.Token);
                     lock (activeClientsLock)
                     {
                         activeClients.Add(acceptedClient);
                     }
 
-                    clientTasks.Add(HandleTrackedClientAsync(
+                    var clientTask = HandleTrackedClientAsync(
                         acceptedClient,
                         activeClients,
                         activeClientsLock,
-                        cancellationToken));
+                        acceptCancellation.Token);
+                    clientTasks.Add(clientTask);
+                    _ = clientTask.ContinueWith(
+                        static (_, state) => ((CancellationTokenSource)state!).Cancel(),
+                        acceptCancellation,
+                        CancellationToken.None,
+                        TaskContinuationOptions.OnlyOnFaulted
+                            | TaskContinuationOptions.ExecuteSynchronously,
+                        TaskScheduler.Default);
                     acceptedClient = null;
                     slotAcquired = false;
                 }
-                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                catch (OperationCanceledException)
+                    when (acceptCancellation.IsCancellationRequested)
                 {
                     acceptedClient?.Dispose();
                     if (slotAcquired)
@@ -180,12 +213,14 @@ namespace CSharpServer.Network
             TcpClient client,
             CancellationToken cancellationToken)
         {
+            Interlocked.Increment(ref activeClientCount);
             try
             {
-                await HandleClientAsync(client, cancellationToken);
+                await clientHandler(client, cancellationToken);
             }
             finally
             {
+                Interlocked.Decrement(ref activeClientCount);
                 clientSlots.Release();
             }
         }
@@ -196,9 +231,10 @@ namespace CSharpServer.Network
             object activeClientsLock,
             CancellationToken cancellationToken)
         {
+            Interlocked.Increment(ref activeClientCount);
             try
             {
-                await HandleClientAsync(client, cancellationToken);
+                await clientHandler(client, cancellationToken);
             }
             finally
             {
@@ -207,6 +243,7 @@ namespace CSharpServer.Network
                     activeClients.Remove(client);
                 }
 
+                Interlocked.Decrement(ref activeClientCount);
                 clientSlots.Release();
             }
         }

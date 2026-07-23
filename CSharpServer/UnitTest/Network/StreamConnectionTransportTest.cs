@@ -17,6 +17,22 @@ namespace UnitTest.Network
         }
 
         [Fact]
+        public async Task SendAsync_PropagatesCancellationToStreamWrite()
+        {
+            using var stream = new CancellationAwareWriteStream();
+            var transport = new StreamConnectionTransport(stream);
+            using var cancellationTokenSource = new CancellationTokenSource();
+            var sendTask = transport.SendAsync(
+                new byte[] { 0x01 },
+                cancellationTokenSource.Token).AsTask();
+
+            await stream.WriteStarted.Task.WaitAsync(TimeSpan.FromSeconds(1));
+            await cancellationTokenSource.CancelAsync();
+
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => sendTask);
+        }
+
+        [Fact]
         public void Close_ClosesStream()
         {
             using var stream = new TrackingStream();
@@ -40,7 +56,7 @@ namespace UnitTest.Network
         }
 
         [Fact]
-        public async Task Close_WaitsForActiveSendToComplete()
+        public async Task Close_ReturnsWhileActiveSendIsBlocked()
         {
             using var stream = new BlockingWriteStream();
             var transport = new StreamConnectionTransport(stream);
@@ -48,20 +64,12 @@ namespace UnitTest.Network
 
             Assert.True(stream.WriteStarted.Wait(TimeSpan.FromSeconds(1)));
 
-            using var closeStarted = new ManualResetEventSlim();
-            var closeTask = Task.Run(() =>
-            {
-                closeStarted.Set();
-                transport.Close();
-            });
-
-            Assert.True(closeStarted.Wait(TimeSpan.FromSeconds(1)));
-            var closedBeforeSendCompleted = stream.CloseCalled.Wait(TimeSpan.FromMilliseconds(100));
+            var closeTask = Task.Run(transport.Close);
+            await closeTask.WaitAsync(TimeSpan.FromSeconds(1));
 
             stream.AllowWriteToComplete.Set();
-            await Task.WhenAll(sendTask, closeTask);
+            await Assert.ThrowsAnyAsync<ObjectDisposedException>(() => sendTask);
 
-            Assert.False(closedBeforeSendCompleted);
             Assert.True(stream.CloseCalled.IsSet);
         }
 
@@ -95,6 +103,45 @@ namespace UnitTest.Network
             {
                 CloseCalled.Set();
                 base.Dispose(disposing);
+            }
+        }
+
+        private sealed class CancellationAwareWriteStream : Stream
+        {
+            public TaskCompletionSource WriteStarted { get; } = new(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+
+            public override bool CanRead => false;
+            public override bool CanSeek => false;
+            public override bool CanWrite => true;
+            public override long Length => throw new NotSupportedException();
+            public override long Position
+            {
+                get => throw new NotSupportedException();
+                set => throw new NotSupportedException();
+            }
+
+            public override void Flush()
+            {
+            }
+
+            public override int Read(byte[] buffer, int offset, int count) =>
+                throw new NotSupportedException();
+
+            public override long Seek(long offset, SeekOrigin origin) =>
+                throw new NotSupportedException();
+
+            public override void SetLength(long value) => throw new NotSupportedException();
+
+            public override void Write(byte[] buffer, int offset, int count) =>
+                throw new NotSupportedException();
+
+            public override async ValueTask WriteAsync(
+                ReadOnlyMemory<byte> buffer,
+                CancellationToken cancellationToken = default)
+            {
+                WriteStarted.TrySetResult();
+                await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
             }
         }
     }

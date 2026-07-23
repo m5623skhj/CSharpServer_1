@@ -19,9 +19,32 @@ namespace CSharpServer.Network
             int inBufferSize,
             Action<byte[]> packetHandler,
             IConnectionTransport transport)
+            : this(
+                stream,
+                inBufferSize,
+                packetHandler,
+                (packet, _) =>
+                {
+                    packetHandler(packet);
+                    return ValueTask.CompletedTask;
+                },
+                transport)
         {
-            connection = new Connection(transport, packetHandler);
-            reader = new StreamConnectionReader(stream, inBufferSize, connection.ReceiveFromTransport);
+        }
+
+        internal StreamConnection(
+            Stream stream,
+            int inBufferSize,
+            Action<byte[]> packetHandler,
+            Func<byte[], CancellationToken, ValueTask> asyncPacketHandler,
+            IConnectionTransport transport)
+        {
+            connection = new Connection(transport, packetHandler, asyncPacketHandler);
+            reader = new StreamConnectionReader(
+                stream,
+                inBufferSize,
+                connection.ReceiveFromTransport,
+                connection.ReceiveFromTransportAsync);
         }
 
         public bool ReadOnce()
@@ -77,6 +100,11 @@ namespace CSharpServer.Network
         public void Send(byte[] payload)
         {
             connection.Send(payload);
+        }
+
+        public ValueTask SendAsync(byte[] payload, CancellationToken cancellationToken)
+        {
+            return connection.SendAsync(payload, cancellationToken);
         }
 
         public void Close()

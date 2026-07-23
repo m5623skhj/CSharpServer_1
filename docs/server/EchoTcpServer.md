@@ -73,7 +73,9 @@ Starts the TCP listener.
 
 - Connection slots are returned from handler `finally` blocks, including failure and cancellation paths.
 - Completed successful client handler tasks are pruned while the open-ended accept loop is running.
+- A faulted handler cancels the accept wait immediately, closes peer handlers, and propagates its original exception.
 - Concurrent handlers await `StreamConnection.ReadUntilEndAsync` without wrapping synchronous reads in `Task.Run`.
+- Concurrent echo responses use cancellation-aware asynchronous writes.
 - Expected cancellation from an active client read is handled as normal server shutdown.
 - Client-level connection, stream, and `InvalidDataException` failures are isolated so one bad client does not fault the server loop.
 - General `InvalidOperationException` failures are not swallowed as client network errors.

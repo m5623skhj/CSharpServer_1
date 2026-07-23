@@ -33,6 +33,19 @@ namespace UnitTest.Network
         }
 
         [Fact]
+        public async Task SendAsync_WritesEncodedPacketToTransport()
+        {
+            var payload = new byte[] { 0x68, 0x65, 0x6C, 0x6C, 0x6F };
+            var transport = new FakeConnectionTransport();
+            var connection = new Connection(transport, _ => { });
+
+            await connection.SendAsync(payload, CancellationToken.None);
+
+            var sentPacket = Assert.Single(transport.SentPackets);
+            Assert.Equal(PacketEncoder.Encode(payload), sentPacket);
+        }
+
+        [Fact]
         public void Close_ClosesTransport()
         {
             var transport = new FakeConnectionTransport();
@@ -51,6 +64,14 @@ namespace UnitTest.Network
             public void Send(byte[] data)
             {
                 SentPackets.Add(data);
+            }
+
+            public ValueTask SendAsync(
+                ReadOnlyMemory<byte> data,
+                CancellationToken cancellationToken)
+            {
+                SentPackets.Add(data.ToArray());
+                return ValueTask.CompletedTask;
             }
 
             public void Close()

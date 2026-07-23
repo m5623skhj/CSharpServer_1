@@ -125,10 +125,11 @@ public sealed class EchoClient
             var readCount = stream.Read(receiveBuffer);
             if (readCount == 0)
             {
-                throw new InvalidOperationException("Connection closed before echo response was received.");
+                throw new EndOfStreamException(
+                    "Connection closed before echo response was received.");
             }
 
-            packetBuffer.Append(receiveBuffer[..readCount]);
+            packetBuffer.Append(receiveBuffer.AsSpan(0, readCount));
             if (packetBuffer.TryReadPacket(out var responsePayload) && responsePayload is not null)
             {
                 return responsePayload;
@@ -146,10 +147,11 @@ public sealed class EchoClient
             var readCount = await stream.ReadAsync(receiveBuffer, cancellationToken);
             if (readCount == 0)
             {
-                throw new InvalidOperationException("Connection closed before echo response was received.");
+                throw new EndOfStreamException(
+                    "Connection closed before echo response was received.");
             }
 
-            packetBuffer.Append(receiveBuffer[..readCount]);
+            packetBuffer.Append(receiveBuffer.AsSpan(0, readCount));
             if (packetBuffer.TryReadPacket(out var responsePayload) && responsePayload is not null)
             {
                 return responsePayload;

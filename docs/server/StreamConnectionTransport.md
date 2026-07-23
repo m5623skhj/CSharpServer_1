@@ -18,18 +18,24 @@ Writes raw bytes to a `Stream` and closes it.
 
 ### `Send(byte[] data)`
 
-Writes the provided data to the stream while holding the transport synchronization lock.
+Writes the provided data while holding exclusive send access.
 
 Concurrent sends are serialized so packet bytes from separate calls cannot overlap.
 
 Throws `ObjectDisposedException` after the transport has been closed.
 
+### `SendAsync(ReadOnlyMemory<byte> data, CancellationToken cancellationToken)`
+
+- Waits asynchronously for exclusive send access.
+- Propagates cancellation to `Stream.WriteAsync`.
+- Rejects sends after close.
+
 ### `Close()`
 
-Waits for an active send to finish and closes the stream once.
+Closes the stream once without waiting behind an active send.
 
 Repeated close calls have no effect.
 
 ## Notes
 
-The class serializes send and close operations with one lock. A close cannot dispose the stream while a send is writing.
+Sync and async sends share one semaphore. Close uses a separate state lock so it can interrupt a blocked stream write.

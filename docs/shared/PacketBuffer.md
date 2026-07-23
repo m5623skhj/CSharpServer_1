@@ -28,6 +28,10 @@ Stateful packet decoder for stream-oriented TCP data.
 
 Appends newly received bytes to the internal buffer.
 
+### `Append(ReadOnlySpan<byte> data)`
+
+Copies received bytes directly into list storage without creating a sliced intermediate array.
+
 ### `TryReadPacket(out byte[]? packet)`
 
 - Returns `false` when the header or payload is incomplete.
@@ -35,6 +39,7 @@ Appends newly received bytes to the internal buffer.
 - Removes the consumed packet from the internal buffer.
 - Throws `InvalidDataException` for negative or oversized payload lengths.
 - Reads the length header with an explicit little-endian conversion.
+- Reads the header directly from list storage without allocating a temporary array.
 
 ## Notes
 

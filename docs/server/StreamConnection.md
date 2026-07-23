@@ -46,10 +46,14 @@ Repeatedly awaits `StreamConnectionReader.ReadOnceAsync` until EOF and propagate
 
 Sends a payload through the internal `Connection`.
 
+### `SendAsync(byte[] payload, CancellationToken cancellationToken)`
+
+Sends a payload through the cancellation-aware asynchronous connection path.
+
 ### `Close()`
 
 Closes the internal connection transport.
 
 ## Notes
 
-`ReadUntilEnd()` remains available for the sequential synchronous server flow. Concurrent server flows use `ReadUntilEndAsync()`.
+`ReadUntilEnd()` remains available for the sequential synchronous server flow. Concurrent server flows await asynchronous packet handlers and writes through `ReadUntilEndAsync()`.

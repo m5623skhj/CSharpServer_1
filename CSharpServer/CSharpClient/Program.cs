@@ -30,6 +30,11 @@ internal static class Program
             Console.Error.WriteLine($"Client network error: {exception.Message}");
             return 1;
         }
+        catch (InvalidDataException exception)
+        {
+            Console.Error.WriteLine($"Client protocol error: {exception.Message}");
+            return 1;
+        }
     }
 
     private static bool IsNetworkException(Exception exception)

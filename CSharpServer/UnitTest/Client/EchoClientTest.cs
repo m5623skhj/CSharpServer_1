@@ -25,12 +25,12 @@ namespace UnitTest.Client
         }
 
         [Fact]
-        public void SendEchoRequest_ThrowsInvalidOperationException_WhenResponseIsNotReceived()
+        public void SendEchoRequest_ThrowsEndOfStreamException_WhenResponseIsNotReceived()
         {
             using var stream = new ScriptedStream([]);
             var client = new EchoClient();
 
-            Assert.Throws<InvalidOperationException>(() =>
+            Assert.Throws<EndOfStreamException>(() =>
             {
                 client.SendEchoRequest(stream, "hello");
             });

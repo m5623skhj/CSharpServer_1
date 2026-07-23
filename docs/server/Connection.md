@@ -16,13 +16,21 @@ Combines payload handling with an `IConnectionTransport`.
 
 ## Public Methods
 
-### `ReceiveFromTransport(byte[] data)`
+### `ReceiveFromTransport(ReadOnlyMemory<byte> data)`
 
 Passes raw bytes from the transport into the internal `Session`.
+
+### `ReceiveFromTransportAsync(ReadOnlyMemory<byte> data, CancellationToken cancellationToken)`
+
+Passes raw bytes into asynchronous session processing and awaits packet handlers.
 
 ### `Send(byte[] payload)`
 
 Sends a payload through the internal `Session`, which encodes it before transport write.
+
+### `SendAsync(byte[] payload, CancellationToken cancellationToken)`
+
+Encodes and sends a payload through the asynchronous transport path.
 
 ### `Close()`
 

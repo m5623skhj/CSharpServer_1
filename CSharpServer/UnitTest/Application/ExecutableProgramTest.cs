@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
@@ -70,6 +71,73 @@ namespace UnitTest.Application
             Assert.DoesNotContain("Unhandled exception", result.StandardError);
             Assert.DoesNotContain("System.TimeoutException", result.StandardError);
             Assert.Empty(result.StandardOutput);
+        }
+
+        [Fact]
+        public async Task Client_ReturnsNetworkErrorAndExitCodeOne_WhenServerClosesBeforeResponse()
+        {
+            using var listener = new TcpListener(IPAddress.Loopback, 0);
+            listener.Start();
+            var port = ((IPEndPoint)listener.LocalEndpoint).Port;
+            var serverTask = AcceptRequestAndCloseAsync(listener);
+
+            var result = await RunExecutableAsync(
+                "CSharpClient.dll",
+                "127.0.0.1",
+                port.ToString(),
+                "hello",
+                "2000");
+            await serverTask;
+
+            Assert.Equal(1, result.ExitCode);
+            Assert.Contains("Client network error:", result.StandardError);
+            Assert.DoesNotContain("Unhandled exception", result.StandardError);
+            Assert.DoesNotContain("System.", result.StandardError);
+            Assert.Empty(result.StandardOutput);
+        }
+
+        [Fact]
+        public async Task Client_ReturnsProtocolErrorAndExitCodeOne_WhenResponseIsMalformed()
+        {
+            using var listener = new TcpListener(IPAddress.Loopback, 0);
+            listener.Start();
+            var port = ((IPEndPoint)listener.LocalEndpoint).Port;
+            var serverTask = AcceptRequestAndSendMalformedResponseAsync(listener);
+
+            var result = await RunExecutableAsync(
+                "CSharpClient.dll",
+                "127.0.0.1",
+                port.ToString(),
+                "hello",
+                "2000");
+            await serverTask;
+
+            Assert.Equal(1, result.ExitCode);
+            Assert.Contains("Client protocol error:", result.StandardError);
+            Assert.DoesNotContain("Unhandled exception", result.StandardError);
+            Assert.DoesNotContain("System.IO.InvalidDataException", result.StandardError);
+            Assert.Empty(result.StandardOutput);
+        }
+
+        private static async Task AcceptRequestAndCloseAsync(TcpListener listener)
+        {
+            using var client = await listener.AcceptTcpClientAsync();
+            var request = new byte[sizeof(int) + "hello".Length];
+            await client.GetStream().ReadExactlyAsync(request);
+        }
+
+        private static async Task AcceptRequestAndSendMalformedResponseAsync(TcpListener listener)
+        {
+            using var client = await listener.AcceptTcpClientAsync();
+            var stream = client.GetStream();
+            var request = new byte[sizeof(int) + "hello".Length];
+            await stream.ReadExactlyAsync(request);
+
+            var malformedHeader = new byte[sizeof(int)];
+            BinaryPrimitives.WriteInt32LittleEndian(
+                malformedHeader,
+                CSharpServer.Packet.ProtocolLimits.MaxPayloadLength + 1);
+            await stream.WriteAsync(malformedHeader);
         }
 
         private static async Task<ProcessResult> RunExecutableAsync(

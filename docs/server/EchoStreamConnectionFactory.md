@@ -23,8 +23,9 @@ Static factory for composing `EchoPacketHandler` and `StreamConnection`.
 - Creates a `StreamConnection`.
 - Wires the echo handler and internal connection to the same transport.
 - Encodes echo responses and sends them through the transport synchronization boundary.
+- Wires async packet handling to cancellation-aware transport writes.
 - Returns the configured connection.
 
 ## Notes
 
-The factory avoids self-referential connection wiring while ensuring echo responses, regular sends, and close operations share one transport.
+The factory avoids self-referential connection wiring while ensuring sync and async echo responses, regular sends, and close operations share one transport.

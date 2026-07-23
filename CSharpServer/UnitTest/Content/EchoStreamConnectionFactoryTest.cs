@@ -31,22 +31,29 @@ namespace UnitTest.Content
 
             await stream.FirstWriteStarted.Task.WaitAsync(TimeSpan.FromSeconds(1));
 
-            using var sendStarted = new ManualResetEventSlim();
             var sendTask = Task.Run(() =>
             {
-                sendStarted.Set();
+                stream.SecondWriteRequested.TrySetResult();
                 connection.Send([0x02]);
             });
 
-            Assert.True(sendStarted.Wait(TimeSpan.FromSeconds(1)));
-            var secondWriteEnteredEarly = stream.SecondWriteEntered.Wait(
-                TimeSpan.FromMilliseconds(100));
-
+            await stream.SecondWriteRequested.Task.WaitAsync(TimeSpan.FromSeconds(1));
             stream.AllowFirstWriteToComplete.Set();
             await Task.WhenAll(echoTask, sendTask);
 
-            Assert.False(secondWriteEnteredEarly);
             Assert.False(stream.HadOverlappingWrites);
+        }
+
+        [Fact]
+        public async Task Create_UsesAsyncWriteDuringAsyncReadLoop()
+        {
+            var encodedPacket = PacketEncoder.Encode([0x01]);
+            using var stream = new AsyncEchoStream(encodedPacket);
+            var connection = EchoStreamConnectionFactory.Create(stream, inBufferSize: 16);
+
+            await connection.ReadUntilEndAsync(CancellationToken.None);
+
+            Assert.Equal(encodedPacket, stream.WrittenData);
         }
 
         private sealed class ConcurrentWriteTrackingStream : Stream
@@ -63,7 +70,8 @@ namespace UnitTest.Content
             public TaskCompletionSource FirstWriteStarted { get; } = new(
                 TaskCreationOptions.RunContinuationsAsynchronously);
             public ManualResetEventSlim AllowFirstWriteToComplete { get; } = new();
-            public ManualResetEventSlim SecondWriteEntered { get; } = new();
+            public TaskCompletionSource SecondWriteRequested { get; } = new(
+                TaskCreationOptions.RunContinuationsAsynchronously);
             public bool HadOverlappingWrites { get; private set; }
 
             public override bool CanRead => true;
@@ -108,11 +116,8 @@ namespace UnitTest.Content
                     if (Interlocked.Increment(ref writeCallCount) == 1)
                     {
                         FirstWriteStarted.TrySetResult();
+                        SecondWriteRequested.Task.GetAwaiter().GetResult();
                         AllowFirstWriteToComplete.Wait();
-                    }
-                    else
-                    {
-                        SecondWriteEntered.Set();
                     }
                 }
                 finally
@@ -126,6 +131,68 @@ namespace UnitTest.Content
                 if (disposing)
                 {
                     readStream.Dispose();
+                }
+
+                base.Dispose(disposing);
+            }
+        }
+
+        private sealed class AsyncEchoStream : Stream
+        {
+            private readonly MemoryStream readStream;
+            private readonly MemoryStream writeStream = new();
+
+            public AsyncEchoStream(byte[] readData)
+            {
+                readStream = new MemoryStream(readData);
+            }
+
+            public byte[] WrittenData => writeStream.ToArray();
+            public override bool CanRead => true;
+            public override bool CanSeek => false;
+            public override bool CanWrite => true;
+            public override long Length => throw new NotSupportedException();
+            public override long Position
+            {
+                get => throw new NotSupportedException();
+                set => throw new NotSupportedException();
+            }
+
+            public override void Flush()
+            {
+            }
+
+            public override int Read(byte[] buffer, int offset, int count) =>
+                throw new NotSupportedException();
+
+            public override ValueTask<int> ReadAsync(
+                Memory<byte> buffer,
+                CancellationToken cancellationToken = default)
+            {
+                return readStream.ReadAsync(buffer, cancellationToken);
+            }
+
+            public override long Seek(long offset, SeekOrigin origin) =>
+                throw new NotSupportedException();
+
+            public override void SetLength(long value) => throw new NotSupportedException();
+
+            public override void Write(byte[] buffer, int offset, int count) =>
+                throw new NotSupportedException();
+
+            public override ValueTask WriteAsync(
+                ReadOnlyMemory<byte> buffer,
+                CancellationToken cancellationToken = default)
+            {
+                return writeStream.WriteAsync(buffer, cancellationToken);
+            }
+
+            protected override void Dispose(bool disposing)
+            {
+                if (disposing)
+                {
+                    readStream.Dispose();
+                    writeStream.Dispose();
                 }
 
                 base.Dispose(disposing);

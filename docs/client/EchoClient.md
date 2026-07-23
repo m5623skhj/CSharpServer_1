@@ -53,6 +53,8 @@ Sends a length-prefixed echo request and reads one length-prefixed response.
 
 ## Failure Behavior
 
-Throws `InvalidOperationException` if the stream closes before a complete response packet is received.
+Throws `EndOfStreamException` if the stream closes before a complete response packet is received.
+
+Throws `InvalidDataException` when a response contains an invalid packet length.
 
 The TimeSpan overloads throw `TimeoutException` if the complete request does not finish before the configured timeout.

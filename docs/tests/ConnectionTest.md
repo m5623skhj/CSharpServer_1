@@ -22,4 +22,5 @@ Test-only `IConnectionTransport` implementation that records sent packets and cl
 
 - Raw transport bytes are passed into the session and decoded for the handler.
 - Sending a payload writes an encoded packet to transport.
+- Sending a payload asynchronously writes an encoded packet through the async transport contract.
 - Closing a connection closes the transport.

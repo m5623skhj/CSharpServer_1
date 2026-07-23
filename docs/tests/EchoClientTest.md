@@ -26,7 +26,7 @@ Test-only stream that records writes and keeps async reads pending until cancell
 
 - `SendEchoRequest` writes an encoded request packet.
 - `SendEchoRequest` decodes one encoded response packet.
-- `SendEchoRequest` throws `InvalidOperationException` when the stream closes before a response is received.
+- `SendEchoRequest` throws `EndOfStreamException` when the stream closes before a response is received.
 - `SendEchoRequestAsync` throws `TimeoutException` when the complete request does not finish before the timeout.
 - The host/port async overload throws `TimeoutException` when a connected server receives the request but does not respond.
 - The host/port cancellation overload propagates cancellation during TCP connection.

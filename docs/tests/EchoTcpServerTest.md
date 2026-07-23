@@ -26,7 +26,8 @@ Verifies `EchoTcpServer` and `EchoClient` integration over loopback TCP.
 - Verifies that `AcceptAndHandleConcurrently(CancellationToken)` returns after cancellation while preserving accepted client echo responses.
 - Verifies that cancellation stops an already accepted idle client's asynchronous read so the server loop can return.
 - Uses a completed echo round trip instead of an arbitrary delay to prove the client was accepted before cancellation.
-- Verifies that a second client is not handled while the configured single connection slot is occupied.
+- Verifies the active connection count remains within the configured limit and a queued client proceeds after slot release.
 - Verifies that an idle client is closed after its configured timeout.
+- Verifies that an unexpected client handler fault stops accept processing and propagates immediately.
 - Verifies that a malformed client packet does not prevent later clients from receiving echo responses.
 - Verifies that zero buffer size, connection limit, and idle timeout are rejected by the server constructor.

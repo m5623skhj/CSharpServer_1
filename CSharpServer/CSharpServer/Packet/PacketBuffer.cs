@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using System.Runtime.InteropServices;
 
 namespace CSharpServer.Packet
 {
@@ -16,7 +17,14 @@ namespace CSharpServer.Packet
 
         public void Append(byte[] data)
         {
-            buffer.AddRange(data);
+            Append(data.AsSpan());
+        }
+
+        public void Append(ReadOnlySpan<byte> data)
+        {
+            var previousCount = buffer.Count;
+            CollectionsMarshal.SetCount(buffer, previousCount + data.Length);
+            data.CopyTo(CollectionsMarshal.AsSpan(buffer)[previousCount..]);
         }
 
         public bool TryReadPacket(out byte[]? packet)
@@ -51,7 +59,8 @@ namespace CSharpServer.Packet
 
         private int ReadPayloadLength()
         {
-            return BinaryPrimitives.ReadInt32LittleEndian(buffer.GetRange(0, HeaderSize).ToArray());
+            return BinaryPrimitives.ReadInt32LittleEndian(
+                CollectionsMarshal.AsSpan(buffer)[..HeaderSize]);
         }
     }
 }

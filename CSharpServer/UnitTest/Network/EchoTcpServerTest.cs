@@ -120,15 +120,19 @@ namespace UnitTest.Network
                 await firstStream.WriteAsync(packet);
                 var firstResponse = new byte[packet.Length];
                 await firstStream.ReadExactlyAsync(firstResponse);
+                Assert.Equal(1, server.ActiveClientCount);
 
                 await secondClient.ConnectAsync(IPAddress.Loopback, server.Port);
                 var secondStream = secondClient.GetStream();
                 await secondStream.WriteAsync(packet);
                 var secondResponse = new byte[packet.Length];
-                using var readCancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(200));
 
-                await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
-                    secondStream.ReadExactlyAsync(secondResponse, readCancellation.Token).AsTask());
+                Assert.Equal(1, server.ActiveClientCount);
+                firstClient.Close();
+                await secondStream.ReadExactlyAsync(secondResponse)
+                    .AsTask()
+                    .WaitAsync(TimeSpan.FromSeconds(5));
+                Assert.Equal(packet, secondResponse);
             }
             finally
             {
@@ -170,6 +174,29 @@ namespace UnitTest.Network
                 await serverCancellation.CancelAsync();
                 await serverTask.WaitAsync(TimeSpan.FromSeconds(5));
             }
+        }
+
+        [Fact]
+        public async Task AcceptAndHandleConcurrently_PropagatesUnexpectedClientHandlerFailure()
+        {
+            using var server = new EchoTcpServer(
+                IPAddress.Loopback,
+                port: 0,
+                inBufferSize: 2,
+                maxConcurrentClients: 1,
+                clientIdleTimeout: TimeSpan.FromSeconds(5),
+                clientHandler: (_, _) => Task.FromException(
+                    new InvalidOperationException("handler failed")));
+            using var cancellationTokenSource = new CancellationTokenSource();
+            using var client = new TcpClient();
+            server.Start();
+            var serverTask = server.AcceptAndHandleConcurrently(cancellationTokenSource.Token);
+
+            await client.ConnectAsync(IPAddress.Loopback, server.Port);
+
+            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                serverTask.WaitAsync(TimeSpan.FromSeconds(1)));
+            Assert.Equal("handler failed", exception.Message);
         }
 
         [Fact]

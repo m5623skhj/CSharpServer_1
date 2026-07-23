@@ -20,6 +20,10 @@ Interface for sending raw encoded packet bytes and closing the underlying transp
 
 Writes raw bytes to the transport.
 
+### `SendAsync(ReadOnlyMemory<byte> data, CancellationToken cancellationToken)`
+
+Writes raw bytes asynchronously and propagates cancellation to the transport.
+
 ### `Close()`
 
 Closes the transport.

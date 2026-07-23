@@ -23,6 +23,7 @@ Internal static entry class for the client process.
 - Prints the decoded echo response.
 - Returns exit code `0` after a successful response.
 - Writes expected socket, I/O, and request timeout errors to standard error without a stack trace.
+- Writes malformed response errors as protocol errors without a stack trace.
 - Returns exit code `1` when an expected network error occurs.
 
 ## Notes

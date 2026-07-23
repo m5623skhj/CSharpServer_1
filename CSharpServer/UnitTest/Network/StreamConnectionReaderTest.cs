@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using CSharpServer.Network;
 
 namespace UnitTest.Network
@@ -10,7 +11,10 @@ namespace UnitTest.Network
             var data = new byte[] { 0x01, 0x02, 0x03 };
             using var stream = new MemoryStream(data);
             var receivedData = new List<byte[]>();
-            var reader = new StreamConnectionReader(stream, inBufferSize: 8, receivedData.Add);
+            var reader = new StreamConnectionReader(
+                stream,
+                inBufferSize: 8,
+                data => receivedData.Add(data.ToArray()));
 
             var result = reader.ReadOnce();
 
@@ -24,7 +28,10 @@ namespace UnitTest.Network
         {
             using var stream = new MemoryStream();
             var receivedData = new List<byte[]>();
-            var reader = new StreamConnectionReader(stream, inBufferSize: 8, receivedData.Add);
+            var reader = new StreamConnectionReader(
+                stream,
+                inBufferSize: 8,
+                data => receivedData.Add(data.ToArray()));
 
             var result = reader.ReadOnce();
 
@@ -48,12 +55,21 @@ namespace UnitTest.Network
         {
             using var stream = new ConcurrentReadTrackingStream();
             var receivedData = new List<byte[]>();
-            var reader = new StreamConnectionReader(stream, inBufferSize: 8, receivedData.Add);
+            var reader = new StreamConnectionReader(
+                stream,
+                inBufferSize: 8,
+                data => receivedData.Add(data.ToArray()));
             var firstRead = Task.Run(reader.ReadOnce);
 
             Assert.True(stream.FirstReadEntered.Wait(TimeSpan.FromSeconds(1)));
 
-            var secondRead = Task.Run(reader.ReadOnce);
+            var secondRead = Task.Run(() =>
+            {
+                stream.SecondReadRequested.TrySetResult();
+                return reader.ReadOnce();
+            });
+            await stream.SecondReadRequested.Task.WaitAsync(TimeSpan.FromSeconds(1));
+            stream.AllowFirstReadToComplete.Set();
             await Task.WhenAll(firstRead, secondRead);
 
             Assert.False(stream.HadOverlappingReads);
@@ -66,7 +82,10 @@ namespace UnitTest.Network
             using var stream = new CancellationAwareReadStream();
             using var cancellationTokenSource = new CancellationTokenSource();
             var receivedData = new List<byte[]>();
-            var reader = new StreamConnectionReader(stream, inBufferSize: 8, receivedData.Add);
+            var reader = new StreamConnectionReader(
+                stream,
+                inBufferSize: 8,
+                data => receivedData.Add(data.ToArray()));
             var readTask = reader.ReadOnceAsync(cancellationTokenSource.Token);
 
             await stream.ReadStarted.Task.WaitAsync(TimeSpan.FromSeconds(1));
@@ -76,13 +95,28 @@ namespace UnitTest.Network
             Assert.Empty(receivedData);
         }
 
+        [Fact]
+        public async Task ReadOnceAsync_ReusesReadBufferAcrossCalls()
+        {
+            using var stream = new ReadBufferTrackingStream();
+            var reader = new StreamConnectionReader(stream, inBufferSize: 8, _ => { });
+
+            Assert.True(await reader.ReadOnceAsync(CancellationToken.None));
+            Assert.True(await reader.ReadOnceAsync(CancellationToken.None));
+
+            Assert.Equal(2, stream.ReadBuffers.Count);
+            Assert.Same(stream.ReadBuffers[0], stream.ReadBuffers[1]);
+        }
+
         private sealed class ConcurrentReadTrackingStream : Stream
         {
             private int activeReadCount;
             private int readCallCount;
 
             public ManualResetEventSlim FirstReadEntered { get; } = new();
-            public ManualResetEventSlim SecondReadEntered { get; } = new();
+            public TaskCompletionSource SecondReadRequested { get; } = new(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+            public ManualResetEventSlim AllowFirstReadToComplete { get; } = new();
             public bool HadOverlappingReads { get; private set; }
 
             public override bool CanRead => true;
@@ -112,12 +146,12 @@ namespace UnitTest.Network
                     if (Interlocked.Increment(ref readCallCount) == 1)
                     {
                         FirstReadEntered.Set();
-                        SecondReadEntered.Wait(TimeSpan.FromMilliseconds(100));
+                        SecondReadRequested.Task.GetAwaiter().GetResult();
+                        AllowFirstReadToComplete.Wait();
                         buffer[offset] = 0x01;
                         return 1;
                     }
 
-                    SecondReadEntered.Set();
                     return 0;
                 }
                 finally
@@ -190,6 +224,49 @@ namespace UnitTest.Network
             {
                 throw new NotSupportedException();
             }
+        }
+
+        private sealed class ReadBufferTrackingStream : Stream
+        {
+            private int readCount;
+
+            public List<byte[]> ReadBuffers { get; } = [];
+            public override bool CanRead => true;
+            public override bool CanSeek => false;
+            public override bool CanWrite => false;
+            public override long Length => throw new NotSupportedException();
+            public override long Position
+            {
+                get => throw new NotSupportedException();
+                set => throw new NotSupportedException();
+            }
+
+            public override void Flush()
+            {
+            }
+
+            public override int Read(byte[] buffer, int offset, int count) =>
+                throw new NotSupportedException();
+
+            public override ValueTask<int> ReadAsync(
+                Memory<byte> buffer,
+                CancellationToken cancellationToken = default)
+            {
+                Assert.True(MemoryMarshal.TryGetArray(
+                    (ReadOnlyMemory<byte>)buffer,
+                    out var segment));
+                ReadBuffers.Add(segment.Array!);
+                buffer.Span[0] = (byte)++readCount;
+                return ValueTask.FromResult(1);
+            }
+
+            public override long Seek(long offset, SeekOrigin origin) =>
+                throw new NotSupportedException();
+
+            public override void SetLength(long value) => throw new NotSupportedException();
+
+            public override void Write(byte[] buffer, int offset, int count) =>
+                throw new NotSupportedException();
         }
     }
 }
