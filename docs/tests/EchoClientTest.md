@@ -27,6 +27,9 @@ Test-only stream that records writes, keeps async reads pending until cancellati
 - `SendEchoRequest` writes an encoded request packet.
 - `SendEchoRequest` decodes one encoded response packet.
 - `SendEchoRequest` throws `EndOfStreamException` when the stream closes before a response is received.
+- `SendEchoRequest` rejects a null caller-supplied stream.
+- `SendEchoRequest` rejects a null message before writing a stream request.
+- The host/port overload rejects a null host or message before opening a connection.
 - The synchronous stream overload throws `TimeoutException` when the request does not complete.
 - `SendEchoRequestAsync` throws `TimeoutException` when the complete request does not finish before the timeout.
 - A timed-out stream request closes the stream so it cannot be reused with corrupted protocol state.

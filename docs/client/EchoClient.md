@@ -19,29 +19,35 @@ Sends a length-prefixed echo request and reads one length-prefixed response.
 ### `SendEchoRequest(string host, int port, string message)`
 
 - Executes the async request path synchronously with a five-second default timeout.
+- Rejects a null host or message before opening a connection.
 
 ### `SendEchoRequest(string host, int port, string message, TimeSpan requestTimeout)`
 
 - Executes the async host/port path synchronously with the supplied timeout.
 - Covers connect, write, and response read.
+- Rejects a null host or message before opening a connection.
 
 ### `SendEchoRequest(Stream stream, string message)`
 
 - Executes the async stream path synchronously with a five-second default timeout.
+- Rejects a null stream or message before writing the request.
 
 ### `SendEchoRequest(Stream stream, string message, TimeSpan requestTimeout)`
 
 - Executes the async stream path synchronously with the supplied timeout.
+- Rejects a null stream or message before writing the request.
 - Returns the decoded response or throws `TimeoutException` when the request does not complete.
 
 ### `SendEchoRequestAsync(string host, int port, string message, TimeSpan requestTimeout)`
 
 - Rejects zero or negative timeout values before opening a connection.
+- Rejects a null host or message before opening a connection.
 - Applies one timeout token to TCP connection, request write, and response read.
 - Closes the client and stream after the request completes or fails.
 
 ### `SendEchoRequestAsync(string host, int port, string message, CancellationToken cancellationToken)`
 
+- Rejects a null host or message before opening a connection.
 - Passes caller cancellation to `TcpClient.ConnectAsync`.
 - Uses the same token for request write and response read.
 - Propagates `OperationCanceledException` to the caller.
@@ -49,6 +55,7 @@ Sends a length-prefixed echo request and reads one length-prefixed response.
 ### `SendEchoRequestAsync(Stream stream, string message, TimeSpan requestTimeout)`
 
 - Rejects zero or negative timeout values.
+- Rejects a null stream or message before writing the request.
 - Encodes and writes one echo request packet asynchronously.
 - Reads one response packet asynchronously.
 - Cancels the wait when the timeout expires.

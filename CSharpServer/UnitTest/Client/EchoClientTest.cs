@@ -37,6 +37,43 @@ namespace UnitTest.Client
         }
 
         [Fact]
+        public void SendEchoRequest_ThrowsArgumentNullException_WhenStreamIsNull()
+        {
+            var client = new EchoClient();
+
+            Assert.Throws<ArgumentNullException>(() =>
+                client.SendEchoRequest(null!, "hello"));
+        }
+
+        [Fact]
+        public void SendEchoRequest_ThrowsArgumentNullException_WhenMessageIsNull()
+        {
+            using var stream = new ScriptedStream([]);
+            var client = new EchoClient();
+
+            Assert.Throws<ArgumentNullException>(() =>
+                client.SendEchoRequest(stream, null!));
+        }
+
+        [Fact]
+        public void SendEchoRequest_WithHostAndPort_ThrowsArgumentNullException_WhenHostIsNull()
+        {
+            var client = new EchoClient();
+
+            Assert.Throws<ArgumentNullException>(() =>
+                client.SendEchoRequest(null!, 1, "hello"));
+        }
+
+        [Fact]
+        public void SendEchoRequest_WithHostAndPort_ThrowsArgumentNullException_WhenMessageIsNull()
+        {
+            var client = new EchoClient();
+
+            Assert.Throws<ArgumentNullException>(() =>
+                client.SendEchoRequest("127.0.0.1", 1, null!));
+        }
+
+        [Fact]
         public async Task SendEchoRequestAsync_ThrowsTimeoutException_WhenRequestDoesNotCompleteBeforeTimeout()
         {
             using var stream = new WaitingReadStream();
