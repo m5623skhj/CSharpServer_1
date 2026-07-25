@@ -24,6 +24,12 @@ namespace UnitTest.Packet
         }
 
         [Fact]
+        public void Encode_ThrowsArgumentNullException_WhenPayloadIsNull()
+        {
+            Assert.Throws<ArgumentNullException>(() => PacketEncoder.Encode(null!));
+        }
+
+        [Fact]
         public void Encode_ThrowsArgumentException_WhenPayloadExceedsProtocolLimit()
         {
             var payload = new byte[ProtocolLimits.MaxPayloadLength + 1];

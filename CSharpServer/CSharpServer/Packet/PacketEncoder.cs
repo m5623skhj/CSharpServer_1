@@ -6,6 +6,8 @@ namespace CSharpServer.Packet
     {
         public static byte[] Encode(byte[] payload)
         {
+            ArgumentNullException.ThrowIfNull(payload);
+
             if (payload.Length > ProtocolLimits.MaxPayloadLength)
             {
                 throw new ArgumentException(

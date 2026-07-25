@@ -26,6 +26,8 @@ Returns a new byte array in this format:
 
 The length header is written with an explicit little-endian conversion.
 
+Null payloads are rejected with `ArgumentNullException`.
+
 Payloads larger than `ProtocolLimits.MaxPayloadLength` are rejected with `ArgumentException` before a packet is allocated.
 
 ## Notes
