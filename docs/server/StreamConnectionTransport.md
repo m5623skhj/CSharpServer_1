@@ -14,6 +14,8 @@ Stream-based implementation of `IConnectionTransport`.
 
 Writes raw bytes to a `Stream` and closes it.
 
+Rejects a null stream during construction.
+
 ## Public Methods
 
 ### `Send(byte[] data)`

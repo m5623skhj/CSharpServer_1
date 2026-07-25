@@ -9,6 +9,8 @@ namespace CSharpServer.Network
 
         public StreamConnectionTransport(Stream stream)
         {
+            ArgumentNullException.ThrowIfNull(stream);
+
             this.stream = stream;
         }
 

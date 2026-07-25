@@ -73,6 +73,7 @@ The network layer adapts byte streams and TCP connections into packet sessions.
 - `StreamConnectionReader` serializes synchronous and asynchronous raw reads from a stream.
 - `StreamConnectionReader` reuses one read buffer and passes borrowed memory through the internal pipeline.
 - `StreamConnectionTransport` serializes sync and async writes while allowing close to interrupt a blocked write.
+- `StreamConnectionTransport` rejects a null stream at construction so transport failures fail at the API boundary.
 - Concurrent echo processing propagates cancellation through packet handlers and async stream writes.
 - `StreamConnection` composes stream reader, transport, and connection.
 - `ServerOptions` validates executable arguments before listener startup.

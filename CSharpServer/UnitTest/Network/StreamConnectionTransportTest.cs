@@ -5,6 +5,13 @@ namespace UnitTest.Network
     public class StreamConnectionTransportTest
     {
         [Fact]
+        public void Constructor_ThrowsArgumentNullException_WhenStreamIsNull()
+        {
+            Assert.Throws<ArgumentNullException>(() =>
+                new StreamConnectionTransport(null!));
+        }
+
+        [Fact]
         public void Send_WritesDataToStream()
         {
             using var stream = new MemoryStream();
