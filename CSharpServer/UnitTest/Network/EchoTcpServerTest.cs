@@ -125,7 +125,6 @@ namespace UnitTest.Network
                 .WaitAsync(TimeSpan.FromSeconds(1));
             Assert.Equal(0, readCount);
             Assert.Equal(0, server.ActiveClientCount);
-            Assert.Equal(1, server.AvailableClientSlotCount);
         }
 
         [Fact]
@@ -156,7 +155,6 @@ namespace UnitTest.Network
                 .WaitAsync(TimeSpan.FromSeconds(1));
             Assert.Equal(0, readCount);
             Assert.Equal(0, server.ActiveClientCount);
-            Assert.Equal(1, server.AvailableClientSlotCount);
         }
 
         [Fact]
@@ -320,6 +318,14 @@ namespace UnitTest.Network
         }
 
         [Fact]
+        public void Constructor_ThrowsArgumentNullException_WhenIpAddressIsNull()
+        {
+            var exception = Assert.Throws<ArgumentNullException>(() =>
+                new EchoTcpServer(null!, port: 0, inBufferSize: 2));
+            Assert.Equal("ipAddress", exception.ParamName);
+        }
+
+        [Fact]
         public void Constructor_ThrowsArgumentOutOfRangeException_WhenMaxConcurrentClientsIsZero()
         {
             Assert.Throws<ArgumentOutOfRangeException>(() =>
@@ -345,6 +351,16 @@ namespace UnitTest.Network
                     maxConcurrentClients: 1,
                     clientIdleTimeout: TimeSpan.Zero);
             });
+        }
+
+        [Fact]
+        public void Dispose_DisposesClientSlots_WhenNoAcceptLoopIsRunning()
+        {
+            var server = new EchoTcpServer(IPAddress.Loopback, port: 0, inBufferSize: 2);
+
+            server.Dispose();
+
+            Assert.Throws<ObjectDisposedException>(() => server.AvailableClientSlotCount);
         }
     }
 }

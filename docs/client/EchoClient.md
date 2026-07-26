@@ -37,11 +37,13 @@ Sends a length-prefixed echo request and reads one length-prefixed response.
 
 - Executes the async stream path synchronously with a five-second default timeout.
 - Rejects a null stream or message before writing the request.
+- Rejects messages larger than `ProtocolLimits.MaxPayloadLength` when encoded as UTF-8 before allocating the payload.
 
 ### `SendEchoRequest(Stream stream, string message, TimeSpan requestTimeout)`
 
 - Executes the async stream path synchronously with the supplied timeout.
 - Rejects a null stream or message before writing the request.
+- Rejects messages larger than `ProtocolLimits.MaxPayloadLength` when encoded as UTF-8 before allocating the payload.
 - Returns the decoded response or throws `TimeoutException` when the request does not complete.
 
 ### `SendEchoRequestAsync(string host, int port, string message, TimeSpan requestTimeout)`
@@ -68,6 +70,7 @@ Sends a length-prefixed echo request and reads one length-prefixed response.
 
 - Rejects zero or negative timeout values.
 - Rejects a null stream or message before writing the request.
+- Rejects messages larger than `ProtocolLimits.MaxPayloadLength` when encoded as UTF-8 before allocating the payload.
 - Encodes and writes one echo request packet asynchronously.
 - Reads one response packet asynchronously.
 - Cancels the wait when the timeout expires.

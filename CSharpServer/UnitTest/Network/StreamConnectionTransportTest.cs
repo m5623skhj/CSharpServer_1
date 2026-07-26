@@ -24,6 +24,17 @@ namespace UnitTest.Network
         }
 
         [Fact]
+        public void Send_ThrowsArgumentNullException_WhenDataIsNull()
+        {
+            using var stream = new MemoryStream();
+            var transport = new StreamConnectionTransport(stream);
+
+            var exception = Assert.Throws<ArgumentNullException>(() =>
+                transport.Send(null!));
+            Assert.Equal("data", exception.ParamName);
+        }
+
+        [Fact]
         public async Task SendAsync_PropagatesCancellationToStreamWrite()
         {
             using var stream = new CancellationAwareWriteStream();

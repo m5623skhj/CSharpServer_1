@@ -22,6 +22,8 @@ Rejects a null stream during construction.
 
 Writes the provided data while holding exclusive send access.
 
+Rejects null byte arrays before waiting for exclusive send access.
+
 Concurrent sends are serialized so packet bytes from separate calls cannot overlap.
 
 Throws `ObjectDisposedException` after the transport has been closed.

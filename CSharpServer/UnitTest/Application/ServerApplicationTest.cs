@@ -5,6 +5,15 @@ namespace UnitTest.Application
     public class ServerApplicationTest
     {
         [Fact]
+        public async Task RunAsync_ThrowsArgumentNullException_WhenOptionsIsNull()
+        {
+            var application = new ServerApplication();
+
+            await Assert.ThrowsAsync<ArgumentNullException>(() =>
+                application.RunAsync(null!, CancellationToken.None));
+        }
+
+        [Fact]
         public async Task RunAsync_Returns_WhenCancellationIsRequested()
         {
             using var cancellationTokenSource = new CancellationTokenSource();

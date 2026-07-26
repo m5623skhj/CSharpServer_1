@@ -9,6 +9,8 @@ public sealed class ServerApplication
 
     public async Task RunAsync(ServerOptions options, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(options);
+
         using var server = new EchoTcpServer(
             IPAddress.Loopback,
             options.Port,

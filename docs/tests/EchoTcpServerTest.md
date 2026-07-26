@@ -34,4 +34,5 @@ Verifies `EchoTcpServer` and `EchoClient` integration over loopback TCP.
 - Verifies that an unexpected client handler fault stops accept processing and propagates immediately.
 - Verifies that fixed-count mode propagates a handler fault without waiting for the remaining clients to connect.
 - Verifies that a malformed client packet does not prevent later clients from receiving echo responses.
-- Verifies that zero buffer size, connection limit, and idle timeout are rejected by the server constructor.
+- Verifies that null IP address, zero buffer size, connection limit, and idle timeout are rejected by the server constructor.
+- Verifies that disposal makes connection slot state unavailable when no accept loop is running.

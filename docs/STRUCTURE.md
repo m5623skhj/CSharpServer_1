@@ -77,19 +77,21 @@ The network layer adapts byte streams and TCP connections into packet sessions.
 - `StreamConnectionReader` reuses one read buffer and passes borrowed memory through the internal pipeline.
 - `StreamConnectionTransport` serializes sync and async writes while allowing close to interrupt a blocked write.
 - `StreamConnectionTransport` rejects a null stream at construction so transport failures fail at the API boundary.
+- `StreamConnectionTransport.Send(byte[])` rejects null byte arrays before stream writes.
 - Concurrent echo processing propagates cancellation through packet handlers and async stream writes.
 - `StreamConnection` composes stream reader, transport, and connection.
 - `ServerOptions` validates executable arguments before listener startup.
 - `ServerOptions` rejects null argument arrays before reading parser state.
 - `ServerOptions` supplies the concurrent client limit and client idle timeout.
 - `ServerApplication` owns listener startup and passes validated resource limits to the TCP server.
+- `ServerApplication` rejects null options before reading server configuration.
 - `EchoTcpServer` accepts TCP clients and handles each as an echo stream connection.
 - `EchoTcpServer` can run either for a fixed client count or as a cancellable concurrent accept loop.
 - A semaphore bounds active client handlers, and slots are released on completion, failure, or cancellation.
 - Faulted handlers cancel the accept loop immediately and propagate their original exception.
 - Fixed-count mode also cancels remaining accepts instead of waiting for the configured count after a handler fault.
 - `EchoTcpServer` tracks accepted clients at server scope so disposal and accept failures can close every active connection.
-- Disposal cancels both asynchronous accept modes, stops the listener, and lets handler cleanup restore connection slots.
+- Disposal cancels both asynchronous accept modes, stops the listener, closes active clients, and disposes cancellation and slot resources.
 - Each asynchronous client read has a resettable idle timeout so inactive connections cannot remain indefinitely.
 - Concurrent client handlers use cancellation-aware asynchronous stream reads.
 - On cancellation, the open-ended `EchoTcpServer` loop closes active clients and waits for handler tasks to finish.
@@ -115,6 +117,7 @@ The client currently exists as a test and manual verification tool.
 - `EchoClient` rejects empty or whitespace-only hosts before network work begins, matching `ClientOptions`.
 - `EchoClient` rejects ports outside `1..65535` before network work begins, matching `ClientOptions`.
 - `EchoClient` rejects oversized UTF-8 messages before network work begins, matching `ClientOptions`.
+- `EchoClient` stream overloads reject oversized UTF-8 messages before payload allocation and stream writes.
 - A timeout on a caller-supplied stream closes that stream because the request/response framing can no longer be safely reused.
 - Synchronous client methods reuse the async request path with a default or caller-supplied timeout.
 

@@ -23,11 +23,13 @@ Wraps `TcpListener` and accepts echo clients either sequentially or concurrently
 - Creates a listener for the supplied address and port.
 - Stores the stream read buffer size.
 - Uses defaults of 100 concurrent clients and a 30-second client idle timeout.
+- Rejects a null IP address.
 - Rejects zero or negative buffer sizes.
 
 `EchoTcpServer(IPAddress ipAddress, int port, int inBufferSize, int maxConcurrentClients, TimeSpan clientIdleTimeout)`
 
 - Configures the maximum number of actively handled clients and the per-read idle timeout.
+- Rejects a null IP address.
 - Rejects zero or negative buffer size, connection limit, and idle timeout values.
 
 ### `Port`
@@ -92,7 +94,8 @@ Throws `ObjectDisposedException` if the server has already been disposed.
 
 - Cancels fixed-count and open-ended asynchronous accept loops.
 - Stops the listener and closes all accepted active clients.
-- Allows active handler tasks to release their connection slots and complete.
+- Disposes cancellation and connection-slot resources.
+- Allows active handler tasks to complete during shutdown without surfacing slot-release disposal races.
 - Is idempotent.
 
 ## Notes

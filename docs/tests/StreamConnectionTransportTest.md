@@ -30,6 +30,7 @@ Test-only stream that keeps an async write pending until cancellation.
 
 - Constructor rejects a null stream.
 - `Send` writes raw data to the stream.
+- `Send` rejects null byte arrays before writing.
 - `SendAsync` propagates cancellation to the stream write.
 - Concurrent async sends verify semaphore occupancy, ordered completion, and non-overlapping writes.
 - `Close` closes the stream.

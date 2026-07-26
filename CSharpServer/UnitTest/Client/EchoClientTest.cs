@@ -110,6 +110,21 @@ namespace UnitTest.Client
         }
 
         [Fact]
+        public void SendEchoRequest_WithStream_ThrowsArgumentException_WhenMessageExceedsProtocolLimit()
+        {
+            var message = new string(
+                '\u20AC',
+                (ProtocolLimits.MaxPayloadLength / 3) + 1);
+            using var stream = new ScriptedStream([]);
+            var client = new EchoClient();
+
+            var exception = Assert.Throws<ArgumentException>(() =>
+                client.SendEchoRequest(stream, message));
+            Assert.Equal("message", exception.ParamName);
+            Assert.Empty(stream.WrittenData);
+        }
+
+        [Fact]
         public async Task SendEchoRequestAsync_ThrowsTimeoutException_WhenRequestDoesNotCompleteBeforeTimeout()
         {
             using var stream = new WaitingReadStream();

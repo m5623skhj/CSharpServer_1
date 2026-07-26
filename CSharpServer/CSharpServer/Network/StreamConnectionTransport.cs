@@ -18,6 +18,8 @@ namespace CSharpServer.Network
 
         public void Send(byte[] data)
         {
+            ArgumentNullException.ThrowIfNull(data);
+
             sendSemaphore.Wait();
             try
             {

@@ -108,6 +108,7 @@ public sealed class EchoClient
     {
         ArgumentNullException.ThrowIfNull(stream);
         ArgumentNullException.ThrowIfNull(message);
+        ValidateMessageSize(message);
 
         var payload = Encoding.UTF8.GetBytes(message);
         var packet = PacketEncoder.Encode(payload);
@@ -142,12 +143,19 @@ public sealed class EchoClient
             throw new ArgumentOutOfRangeException(nameof(port));
         }
 
-        if (Encoding.UTF8.GetByteCount(message) > ProtocolLimits.MaxPayloadLength)
+        ValidateMessageSize(message);
+    }
+
+    private static void ValidateMessageSize(string message)
+    {
+        if (Encoding.UTF8.GetByteCount(message) <= ProtocolLimits.MaxPayloadLength)
         {
-            throw new ArgumentException(
-                $"Message cannot exceed {ProtocolLimits.MaxPayloadLength} UTF-8 bytes.",
-                nameof(message));
+            return;
         }
+
+        throw new ArgumentException(
+            $"Message cannot exceed {ProtocolLimits.MaxPayloadLength} UTF-8 bytes.",
+            nameof(message));
     }
 
     private static TimeoutException CreateTimeoutException(OperationCanceledException exception)
