@@ -136,6 +136,13 @@ public sealed class EchoClient
         {
             throw new ArgumentOutOfRangeException(nameof(port));
         }
+
+        if (Encoding.UTF8.GetByteCount(message) > ProtocolLimits.MaxPayloadLength)
+        {
+            throw new ArgumentException(
+                $"Message cannot exceed {ProtocolLimits.MaxPayloadLength} UTF-8 bytes.",
+                nameof(message));
+        }
     }
 
     private static TimeoutException CreateTimeoutException(OperationCanceledException exception)

@@ -21,6 +21,7 @@ Sends a length-prefixed echo request and reads one length-prefixed response.
 - Executes the async request path synchronously with a five-second default timeout.
 - Rejects a null host or message before opening a connection.
 - Rejects ports outside `1..65535` before opening a connection.
+- Rejects messages larger than `ProtocolLimits.MaxPayloadLength` when encoded as UTF-8 before opening a connection.
 
 ### `SendEchoRequest(string host, int port, string message, TimeSpan requestTimeout)`
 
@@ -28,6 +29,7 @@ Sends a length-prefixed echo request and reads one length-prefixed response.
 - Covers connect, write, and response read.
 - Rejects a null host or message before opening a connection.
 - Rejects ports outside `1..65535` before opening a connection.
+- Rejects messages larger than `ProtocolLimits.MaxPayloadLength` when encoded as UTF-8 before opening a connection.
 
 ### `SendEchoRequest(Stream stream, string message)`
 
@@ -45,6 +47,7 @@ Sends a length-prefixed echo request and reads one length-prefixed response.
 - Rejects zero or negative timeout values before opening a connection.
 - Rejects a null host or message before opening a connection.
 - Rejects ports outside `1..65535` before opening a connection.
+- Rejects messages larger than `ProtocolLimits.MaxPayloadLength` when encoded as UTF-8 before opening a connection.
 - Applies one timeout token to TCP connection, request write, and response read.
 - Closes the client and stream after the request completes or fails.
 
@@ -52,6 +55,7 @@ Sends a length-prefixed echo request and reads one length-prefixed response.
 
 - Rejects a null host or message before opening a connection.
 - Rejects ports outside `1..65535` before opening a connection.
+- Rejects messages larger than `ProtocolLimits.MaxPayloadLength` when encoded as UTF-8 before opening a connection.
 - Passes caller cancellation to `TcpClient.ConnectAsync`.
 - Uses the same token for request write and response read.
 - Propagates `OperationCanceledException` to the caller.

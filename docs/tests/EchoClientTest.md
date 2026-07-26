@@ -31,6 +31,7 @@ Test-only stream that records writes, keeps async reads pending until cancellati
 - `SendEchoRequest` rejects a null message before writing a stream request.
 - The host/port overload rejects a null host or message before opening a connection.
 - The host/port overload rejects invalid ports before opening a connection.
+- The host/port overload rejects oversized UTF-8 messages before opening a connection.
 - The synchronous stream overload throws `TimeoutException` when the request does not complete.
 - `SendEchoRequestAsync` throws `TimeoutException` when the complete request does not finish before the timeout.
 - A timed-out stream request closes the stream so it cannot be reused with corrupted protocol state.

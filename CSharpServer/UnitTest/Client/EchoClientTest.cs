@@ -86,6 +86,18 @@ namespace UnitTest.Client
         }
 
         [Fact]
+        public void SendEchoRequest_WithHostAndPort_ThrowsArgumentException_WhenMessageExceedsProtocolLimit()
+        {
+            var message = new string(
+                '\u20AC',
+                (ProtocolLimits.MaxPayloadLength / 3) + 1);
+            var client = new EchoClient();
+
+            Assert.Throws<ArgumentException>(() =>
+                client.SendEchoRequest("127.0.0.1", port: 1, message));
+        }
+
+        [Fact]
         public async Task SendEchoRequestAsync_ThrowsTimeoutException_WhenRequestDoesNotCompleteBeforeTimeout()
         {
             using var stream = new WaitingReadStream();
