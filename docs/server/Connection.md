@@ -14,6 +14,8 @@ Adapts a `Session` to a transport.
 
 Combines payload handling with an `IConnectionTransport`.
 
+Rejects a null transport or payload handler during construction.
+
 ## Public Methods
 
 ### `ReceiveFromTransport(ReadOnlyMemory<byte> data)`

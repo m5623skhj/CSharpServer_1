@@ -33,6 +33,8 @@ Reads from a `Stream` and forwards read bytes to a data handler.
 
 ## Constructor Behavior
 
+- Rejects a null stream.
+- Rejects a null data handler.
 - Rejects zero or negative buffer sizes.
 - Allocates one read buffer for the reader lifetime.
 

@@ -39,6 +39,11 @@ namespace CSharpServer.Network
             Func<byte[], CancellationToken, ValueTask> asyncPacketHandler,
             Func<ReadOnlyMemory<byte>, CancellationToken, ValueTask> asyncPacketSender)
         {
+            ArgumentNullException.ThrowIfNull(packetHandler);
+            ArgumentNullException.ThrowIfNull(packetSender);
+            ArgumentNullException.ThrowIfNull(asyncPacketHandler);
+            ArgumentNullException.ThrowIfNull(asyncPacketSender);
+
             this.packetHandler = packetHandler;
             this.packetSender = packetSender;
             this.asyncPacketHandler = asyncPacketHandler;

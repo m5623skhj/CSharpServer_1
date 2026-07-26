@@ -6,6 +6,42 @@ namespace UnitTest.Session
     public class SessionTest
     {
         [Fact]
+        public void Constructor_ThrowsArgumentNullException_WhenPacketHandlerIsNull()
+        {
+            Assert.Throws<ArgumentNullException>(() =>
+                new NetworkSession(null!));
+        }
+
+        [Fact]
+        public void Constructor_ThrowsArgumentNullException_WhenPacketSenderIsNull()
+        {
+            Assert.Throws<ArgumentNullException>(() =>
+                new NetworkSession(_ => { }, null!));
+        }
+
+        [Fact]
+        public void Constructor_ThrowsArgumentNullException_WhenAsyncPacketHandlerIsNull()
+        {
+            Assert.Throws<ArgumentNullException>(() =>
+                new NetworkSession(
+                    _ => { },
+                    _ => { },
+                    null!,
+                    (_, _) => ValueTask.CompletedTask));
+        }
+
+        [Fact]
+        public void Constructor_ThrowsArgumentNullException_WhenAsyncPacketSenderIsNull()
+        {
+            Assert.Throws<ArgumentNullException>(() =>
+                new NetworkSession(
+                    _ => { },
+                    _ => { },
+                    (_, _) => ValueTask.CompletedTask,
+                    null!));
+        }
+
+        [Fact]
         public void Receive_InvokesPacketHandler_WhenCompletePacketIsReceived()
         {
             var payload = new byte[] { 0x68, 0x65, 0x6C, 0x6C, 0x6F };

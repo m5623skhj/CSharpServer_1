@@ -5,6 +5,13 @@ namespace UnitTest.Content
     public class EchoPacketHandlerTest
     {
         [Fact]
+        public void Constructor_ThrowsArgumentNullException_WhenPacketSenderIsNull()
+        {
+            Assert.Throws<ArgumentNullException>(() =>
+                new EchoPacketHandler(null!));
+        }
+
+        [Fact]
         public void Handle_SendsSamePayload()
         {
             var payload = new byte[] { 0x68, 0x65, 0x6C, 0x6C, 0x6F };

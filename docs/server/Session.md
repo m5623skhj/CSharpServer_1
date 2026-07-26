@@ -14,6 +14,8 @@ Connects packet framing to payload-level handlers.
 
 Owns a `PacketBuffer` and uses `PacketEncoder` for outgoing payloads.
 
+Rejects null payload handlers and packet senders during construction.
+
 ## Public Methods
 
 ### `Receive(byte[] data)`

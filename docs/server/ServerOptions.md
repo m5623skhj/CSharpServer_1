@@ -34,6 +34,7 @@ Contains the positive duration allowed between client reads.
 
 ### `TryParse(string[] args, out ServerOptions? options, out string? error)`
 
+- Rejects null argument arrays with `ArgumentNullException`.
 - Uses port `5000` when no argument is supplied.
 - Defaults to 100 concurrent clients and a 30-second client idle timeout.
 - Accepts a port, maximum concurrent client count, and idle timeout in milliseconds.

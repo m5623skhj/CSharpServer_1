@@ -26,6 +26,7 @@ Contain the validated connection target, echo message, and total request timeout
 
 ### `TryParse(string[] args, out ClientOptions? options, out string? error)`
 
+- Rejects null argument arrays with `ArgumentNullException`.
 - Defaults to host `127.0.0.1`, port `5000`, message `hello`, and a five-second request timeout.
 - Rejects empty or whitespace-only hosts before connection startup.
 - Accepts ports from `1` through `65535`.

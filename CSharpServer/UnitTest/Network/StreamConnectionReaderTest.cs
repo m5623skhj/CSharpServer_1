@@ -6,6 +6,22 @@ namespace UnitTest.Network
     public class StreamConnectionReaderTest
     {
         [Fact]
+        public void Constructor_ThrowsArgumentNullException_WhenStreamIsNull()
+        {
+            Assert.Throws<ArgumentNullException>(() =>
+                new StreamConnectionReader(null!, inBufferSize: 8, _ => { }));
+        }
+
+        [Fact]
+        public void Constructor_ThrowsArgumentNullException_WhenDataHandlerIsNull()
+        {
+            using var stream = new MemoryStream();
+
+            Assert.Throws<ArgumentNullException>(() =>
+                new StreamConnectionReader(stream, inBufferSize: 8, null!));
+        }
+
+        [Fact]
         public void ReadOnce_InvokesDataHandler_WithReadData()
         {
             var data = new byte[] { 0x01, 0x02, 0x03 };

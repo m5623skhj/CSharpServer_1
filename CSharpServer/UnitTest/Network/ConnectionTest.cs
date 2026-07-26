@@ -6,6 +6,22 @@ namespace UnitTest.Network
     public class ConnectionTest
     {
         [Fact]
+        public void Constructor_ThrowsArgumentNullException_WhenTransportIsNull()
+        {
+            Assert.Throws<ArgumentNullException>(() =>
+                new Connection(null!, _ => { }));
+        }
+
+        [Fact]
+        public void Constructor_ThrowsArgumentNullException_WhenPacketHandlerIsNull()
+        {
+            var transport = new FakeConnectionTransport();
+
+            Assert.Throws<ArgumentNullException>(() =>
+                new Connection(transport, null!));
+        }
+
+        [Fact]
         public void ReceiveFromTransport_InvokesPacketHandler_WhenCompletePacketIsReceived()
         {
             var payload = new byte[] { 0x68, 0x65, 0x6C, 0x6C, 0x6F };

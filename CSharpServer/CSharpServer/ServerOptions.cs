@@ -27,6 +27,7 @@ public sealed class ServerOptions
     {
         options = null;
         error = null;
+        ArgumentNullException.ThrowIfNull(args);
 
         if (args.Length > 3)
         {

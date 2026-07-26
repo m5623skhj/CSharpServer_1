@@ -16,6 +16,7 @@ Verifies client option defaults, explicit values, and usage-oriented validation 
 
 ## Test Coverage
 
+- Null argument arrays are rejected with `ArgumentNullException`.
 - Empty arguments select all client defaults.
 - Four valid arguments populate every option.
 - Empty and whitespace-only hosts are rejected with usage text.

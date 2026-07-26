@@ -14,6 +14,8 @@ Payload-level echo handler.
 
 Receives decoded payload bytes and sends the same bytes back.
 
+Rejects null packet senders during construction.
+
 ## Public Methods
 
 ### `Handle(byte[] payload)`

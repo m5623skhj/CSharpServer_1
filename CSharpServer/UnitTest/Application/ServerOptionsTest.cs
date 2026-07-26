@@ -5,6 +5,13 @@ namespace UnitTest.Application
     public class ServerOptionsTest
     {
         [Fact]
+        public void TryParse_ThrowsArgumentNullException_WhenArgumentsAreNull()
+        {
+            Assert.Throws<ArgumentNullException>(() =>
+                ServerOptions.TryParse(null!, out _, out _));
+        }
+
+        [Fact]
         public void TryParse_UsesDefaultPort_WhenArgumentsAreEmpty()
         {
             var result = ServerOptions.TryParse([], out var options, out var error);

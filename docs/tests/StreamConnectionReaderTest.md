@@ -28,6 +28,7 @@ Test-only stream that records the backing array supplied to each async read.
 
 ## Test Coverage
 
+- Null stream and data handler constructor arguments are rejected.
 - When bytes are read, `ReadOnce` calls the handler and returns `true`.
 - When EOF is reached, `ReadOnce` does not call the handler and returns `false`.
 - Zero buffer size is rejected by the constructor.

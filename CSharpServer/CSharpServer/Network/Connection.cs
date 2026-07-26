@@ -22,6 +22,10 @@ namespace CSharpServer.Network
             Action<byte[]> packetHandler,
             Func<byte[], CancellationToken, ValueTask> asyncPacketHandler)
         {
+            ArgumentNullException.ThrowIfNull(transport);
+            ArgumentNullException.ThrowIfNull(packetHandler);
+            ArgumentNullException.ThrowIfNull(asyncPacketHandler);
+
             this.transport = transport;
             session = new Session(
                 packetHandler,

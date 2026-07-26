@@ -69,6 +69,7 @@ The packet layer is pure byte processing.
 The network layer adapts byte streams and TCP connections into packet sessions.
 
 - `Session` owns packet encoding/decoding around sync and async payload handlers and serializes receive processing.
+- `Session`, `Connection`, `StreamConnectionReader`, and `EchoPacketHandler` reject null collaborators at construction.
 - `Connection` connects `Session` to a transport.
 - `StreamConnectionReader` serializes synchronous and asynchronous raw reads from a stream.
 - `StreamConnectionReader` reuses one read buffer and passes borrowed memory through the internal pipeline.
@@ -77,6 +78,7 @@ The network layer adapts byte streams and TCP connections into packet sessions.
 - Concurrent echo processing propagates cancellation through packet handlers and async stream writes.
 - `StreamConnection` composes stream reader, transport, and connection.
 - `ServerOptions` validates executable arguments before listener startup.
+- `ServerOptions` rejects null argument arrays before reading parser state.
 - `ServerOptions` supplies the concurrent client limit and client idle timeout.
 - `ServerApplication` owns listener startup and passes validated resource limits to the TCP server.
 - `EchoTcpServer` accepts TCP clients and handles each as an echo stream connection.
@@ -103,6 +105,7 @@ The content layer defines what to do with decoded payloads.
 The client currently exists as a test and manual verification tool.
 
 - `ClientOptions` rejects empty hosts, validates command-line values, and applies a total request timeout without throwing parsing exceptions.
+- `ClientOptions` rejects null argument arrays before reading parser state.
 - Client `Program` prints validation errors, sends a request, and converts expected network or protocol failures into exit code `1`.
 - `EchoClient` connects to a TCP server, sends an encoded echo request, waits for one encoded response, and decodes it.
 - `EchoClient` applies timeout or caller cancellation across TCP connect, request write, and response read.

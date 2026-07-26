@@ -20,6 +20,9 @@ namespace CSharpServer.Content
             Action<byte[]> packetSender,
             Func<byte[], CancellationToken, ValueTask> asyncPacketSender)
         {
+            ArgumentNullException.ThrowIfNull(packetSender);
+            ArgumentNullException.ThrowIfNull(asyncPacketSender);
+
             this.packetSender = packetSender;
             this.asyncPacketSender = asyncPacketSender;
         }

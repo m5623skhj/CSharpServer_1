@@ -13,14 +13,10 @@ namespace CSharpServer.Network
             int inBufferSize,
             Action<byte[]> dataHandler)
             : this(
-                stream,
+                ValidateStream(stream),
                 inBufferSize,
-                data => dataHandler(data.ToArray()),
-                (data, _) =>
-                {
-                    dataHandler(data.ToArray());
-                    return ValueTask.CompletedTask;
-                })
+                CreateDataHandler(dataHandler),
+                CreateAsyncDataHandler(dataHandler))
         {
         }
 
@@ -30,6 +26,9 @@ namespace CSharpServer.Network
             Action<ReadOnlyMemory<byte>> dataHandler,
             Func<ReadOnlyMemory<byte>, CancellationToken, ValueTask> asyncDataHandler)
         {
+            ArgumentNullException.ThrowIfNull(stream);
+            ArgumentNullException.ThrowIfNull(dataHandler);
+            ArgumentNullException.ThrowIfNull(asyncDataHandler);
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(inBufferSize);
 
             this.stream = stream;
@@ -83,6 +82,30 @@ namespace CSharpServer.Network
 
             dataHandler(readBuffer.AsMemory(0, readCount));
             return true;
+        }
+
+        private static Stream ValidateStream(Stream stream)
+        {
+            ArgumentNullException.ThrowIfNull(stream);
+            return stream;
+        }
+
+        private static Action<ReadOnlyMemory<byte>> CreateDataHandler(
+            Action<byte[]> dataHandler)
+        {
+            ArgumentNullException.ThrowIfNull(dataHandler);
+            return data => dataHandler(data.ToArray());
+        }
+
+        private static Func<ReadOnlyMemory<byte>, CancellationToken, ValueTask>
+            CreateAsyncDataHandler(Action<byte[]> dataHandler)
+        {
+            ArgumentNullException.ThrowIfNull(dataHandler);
+            return (data, _) =>
+            {
+                dataHandler(data.ToArray());
+                return ValueTask.CompletedTask;
+            };
         }
     }
 }

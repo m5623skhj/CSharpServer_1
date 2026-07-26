@@ -6,6 +6,13 @@ namespace UnitTest.Client
     public class ClientOptionsTest
     {
         [Fact]
+        public void TryParse_ThrowsArgumentNullException_WhenArgumentsAreNull()
+        {
+            Assert.Throws<ArgumentNullException>(() =>
+                ClientOptions.TryParse(null!, out _, out _));
+        }
+
+        [Fact]
         public void TryParse_UsesDefaults_WhenArgumentsAreEmpty()
         {
             var result = ClientOptions.TryParse([], out var options, out var error);

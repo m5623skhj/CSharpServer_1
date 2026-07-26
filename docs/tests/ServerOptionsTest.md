@@ -16,6 +16,7 @@ Verifies server option defaults and usage-oriented validation failures.
 
 ## Test Coverage
 
+- Null argument arrays are rejected with `ArgumentNullException`.
 - Empty arguments select port `5000`.
 - Empty arguments select 100 concurrent clients and a 30-second idle timeout.
 - Explicit valid connection and timeout values are preserved.

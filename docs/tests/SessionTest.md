@@ -20,6 +20,7 @@ Test-only async handler that blocks the first callback and detects overlapping p
 
 ## Test Coverage
 
+- Null packet handlers and packet senders are rejected during construction.
 - Complete packet receive invokes the packet handler.
 - Incomplete packet data is buffered until complete.
 - Multiple received packets are handled in order.

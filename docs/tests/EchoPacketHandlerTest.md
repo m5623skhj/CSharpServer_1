@@ -16,5 +16,6 @@ Verifies that `EchoPacketHandler` sends back the exact payload it receives.
 
 ## Test Coverage
 
+- Null packet sender constructor arguments are rejected.
 - `Handle` calls the configured sender once.
 - The sent payload equals the received payload.

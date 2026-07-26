@@ -33,6 +33,7 @@ public sealed class ClientOptions
     {
         options = null;
         error = null;
+        ArgumentNullException.ThrowIfNull(args);
 
         if (args.Length > 4)
         {
