@@ -132,6 +132,11 @@ public sealed class EchoClient
     {
         ArgumentNullException.ThrowIfNull(host);
         ArgumentNullException.ThrowIfNull(message);
+        if (string.IsNullOrWhiteSpace(host))
+        {
+            throw new ArgumentException("Host cannot be empty.", nameof(host));
+        }
+
         if (port is < 1 or > 65535)
         {
             throw new ArgumentOutOfRangeException(nameof(port));

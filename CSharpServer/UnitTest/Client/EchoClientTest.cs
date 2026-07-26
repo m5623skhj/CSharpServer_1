@@ -64,6 +64,18 @@ namespace UnitTest.Client
                 client.SendEchoRequest(null!, 1, "hello"));
         }
 
+        [Theory]
+        [InlineData("")]
+        [InlineData(" ")]
+        public void SendEchoRequest_WithHostAndPort_ThrowsArgumentException_WhenHostIsEmpty(
+            string host)
+        {
+            var client = new EchoClient();
+
+            Assert.Throws<ArgumentException>(() =>
+                client.SendEchoRequest(host, 1, "hello"));
+        }
+
         [Fact]
         public void SendEchoRequest_WithHostAndPort_ThrowsArgumentNullException_WhenMessageIsNull()
         {

@@ -20,6 +20,7 @@ Sends a length-prefixed echo request and reads one length-prefixed response.
 
 - Executes the async request path synchronously with a five-second default timeout.
 - Rejects a null host or message before opening a connection.
+- Rejects empty or whitespace-only hosts before opening a connection.
 - Rejects ports outside `1..65535` before opening a connection.
 - Rejects messages larger than `ProtocolLimits.MaxPayloadLength` when encoded as UTF-8 before opening a connection.
 
@@ -28,6 +29,7 @@ Sends a length-prefixed echo request and reads one length-prefixed response.
 - Executes the async host/port path synchronously with the supplied timeout.
 - Covers connect, write, and response read.
 - Rejects a null host or message before opening a connection.
+- Rejects empty or whitespace-only hosts before opening a connection.
 - Rejects ports outside `1..65535` before opening a connection.
 - Rejects messages larger than `ProtocolLimits.MaxPayloadLength` when encoded as UTF-8 before opening a connection.
 
@@ -46,6 +48,7 @@ Sends a length-prefixed echo request and reads one length-prefixed response.
 
 - Rejects zero or negative timeout values before opening a connection.
 - Rejects a null host or message before opening a connection.
+- Rejects empty or whitespace-only hosts before opening a connection.
 - Rejects ports outside `1..65535` before opening a connection.
 - Rejects messages larger than `ProtocolLimits.MaxPayloadLength` when encoded as UTF-8 before opening a connection.
 - Applies one timeout token to TCP connection, request write, and response read.
@@ -54,6 +57,7 @@ Sends a length-prefixed echo request and reads one length-prefixed response.
 ### `SendEchoRequestAsync(string host, int port, string message, CancellationToken cancellationToken)`
 
 - Rejects a null host or message before opening a connection.
+- Rejects empty or whitespace-only hosts before opening a connection.
 - Rejects ports outside `1..65535` before opening a connection.
 - Rejects messages larger than `ProtocolLimits.MaxPayloadLength` when encoded as UTF-8 before opening a connection.
 - Passes caller cancellation to `TcpClient.ConnectAsync`.
