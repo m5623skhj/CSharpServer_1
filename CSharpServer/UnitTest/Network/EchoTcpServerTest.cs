@@ -362,5 +362,31 @@ namespace UnitTest.Network
 
             Assert.Throws<ObjectDisposedException>(() => server.AvailableClientSlotCount);
         }
+
+        [Fact]
+        public async Task Dispose_DisposesClientSlots_AfterSynchronousHandlerCompletes()
+        {
+            using var client = new TcpClient();
+            var server = new EchoTcpServer(IPAddress.Loopback, port: 0, inBufferSize: 2);
+            try
+            {
+                server.Start();
+                var serverTask = Task.Run(server.AcceptAndHandleOnce);
+
+                await client.ConnectAsync(IPAddress.Loopback, server.Port);
+                Assert.True(SpinWait.SpinUntil(
+                    () => server.ActiveClientCount == 1,
+                    TimeSpan.FromSeconds(1)));
+
+                server.Dispose();
+
+                await serverTask.WaitAsync(TimeSpan.FromSeconds(1));
+                Assert.Throws<ObjectDisposedException>(() => server.AvailableClientSlotCount);
+            }
+            finally
+            {
+                server.Dispose();
+            }
+        }
     }
 }

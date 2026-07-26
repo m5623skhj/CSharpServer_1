@@ -282,6 +282,7 @@ namespace CSharpServer.Network
             {
                 UntrackClient(client);
                 Interlocked.Decrement(ref activeClientCount);
+                DisposeClientSlotsIfSafe();
             }
         }
 

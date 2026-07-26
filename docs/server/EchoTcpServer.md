@@ -78,6 +78,7 @@ Throws `ObjectDisposedException` if the server has already been disposed.
 ## Internal Behavior
 
 - Connection slots are returned from handler `finally` blocks, including failure and cancellation paths.
+- Synchronous handler completion retries deferred connection-slot disposal when shutdown began during handling.
 - Accepted clients are tracked at server scope until their handlers complete.
 - Slot waiters are counted internally so concurrency tests can prove that a second client is actually queued.
 - Completed successful client handler tasks are pruned while the open-ended accept loop is running.
@@ -96,6 +97,7 @@ Throws `ObjectDisposedException` if the server has already been disposed.
 - Stops the listener and closes all accepted active clients.
 - Disposes cancellation and connection-slot resources.
 - Allows active handler tasks to complete during shutdown without surfacing slot-release disposal races.
+- Retries deferred connection-slot disposal after synchronous handlers leave their active section.
 - Is idempotent.
 
 ## Notes
