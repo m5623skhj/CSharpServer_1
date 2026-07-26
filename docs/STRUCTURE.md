@@ -51,6 +51,7 @@ Responsibilities:
 - `PacketEncoder` creates length-prefixed packets from payload bytes.
 - `PacketEncoder` rejects null payloads before reading payload length.
 - `PacketBuffer` accumulates received bytes and returns complete payloads.
+- `PacketBuffer` rejects null byte arrays so missing receive data is not silently treated as empty input.
 - `ProtocolLimits` defines the shared 4096-byte maximum payload length used for encoding, decoding, and client validation.
 - Server and client both reuse the same packet classes to avoid wire format drift.
 - Packet length headers are written and read with explicit little-endian conversions.
@@ -69,6 +70,7 @@ The packet layer is pure byte processing.
 The network layer adapts byte streams and TCP connections into packet sessions.
 
 - `Session` owns packet encoding/decoding around sync and async payload handlers and serializes receive processing.
+- `Session.Receive(byte[])` rejects null byte arrays before appending data to the packet buffer.
 - `Session`, `Connection`, `StreamConnectionReader`, and `EchoPacketHandler` reject null collaborators at construction.
 - `Connection` connects `Session` to a transport.
 - `StreamConnectionReader` serializes synchronous and asynchronous raw reads from a stream.

@@ -28,6 +28,8 @@ Stateful packet decoder for stream-oriented TCP data.
 
 Appends newly received bytes to the internal buffer.
 
+Rejects null byte arrays with `ArgumentNullException`.
+
 ### `Append(ReadOnlySpan<byte> data)`
 
 Copies received bytes directly into list storage without creating a sliced intermediate array.

@@ -20,6 +20,7 @@ Rejects null payload handlers and packet senders during construction.
 
 ### `Receive(byte[] data)`
 
+- Rejects null byte arrays with `ArgumentNullException`.
 - Appends raw received data to the internal `PacketBuffer`.
 - Reads all currently complete packets.
 - Invokes the payload handler for each packet in order.

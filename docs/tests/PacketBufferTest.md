@@ -16,6 +16,7 @@ Verifies `PacketBuffer` behavior for complete, incomplete, and malformed packets
 
 ## Test Coverage
 
+- Null byte arrays are rejected before appending.
 - Incomplete headers return `false`.
 - Incomplete payloads return `false`.
 - Complete packets return payload bytes.

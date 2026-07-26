@@ -5,6 +5,14 @@ namespace UnitTest.Packet
     public class PacketBufferTest
     {
         [Fact]
+        public void Append_ThrowsArgumentNullException_WhenDataIsNull()
+        {
+            var buffer = new PacketBuffer();
+
+            Assert.Throws<ArgumentNullException>(() => buffer.Append(null!));
+        }
+
+        [Fact]
         public void TryReadPacket_ReturnFalse_WhenHeaderIsInComplete()
         {
             var buffer = new PacketBuffer();

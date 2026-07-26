@@ -42,6 +42,15 @@ namespace UnitTest.Session
         }
 
         [Fact]
+        public void Receive_ThrowsArgumentNullException_WhenDataIsNull()
+        {
+            var session = new NetworkSession(_ => { });
+
+            Assert.Throws<ArgumentNullException>(() =>
+                session.Receive(null!));
+        }
+
+        [Fact]
         public void Receive_InvokesPacketHandler_WhenCompletePacketIsReceived()
         {
             var payload = new byte[] { 0x68, 0x65, 0x6C, 0x6C, 0x6F };

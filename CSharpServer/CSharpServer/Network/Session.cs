@@ -54,6 +54,8 @@ namespace CSharpServer.Network
 
         public void Receive(byte[] data)
         {
+            ArgumentNullException.ThrowIfNull(data);
+
             Receive((ReadOnlyMemory<byte>)data);
         }
 

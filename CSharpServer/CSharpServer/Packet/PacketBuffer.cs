@@ -17,6 +17,8 @@ namespace CSharpServer.Packet
 
         public void Append(byte[] data)
         {
+            ArgumentNullException.ThrowIfNull(data);
+
             Append(data.AsSpan());
         }
 
