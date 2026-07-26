@@ -112,6 +112,7 @@ The client currently exists as a test and manual verification tool.
 - `EchoClient` connects to a TCP server, sends an encoded echo request, waits for one encoded response, and decodes it.
 - `EchoClient` applies timeout or caller cancellation across TCP connect, request write, and response read.
 - `EchoClient` rejects null host, stream, and message arguments at the public API boundary before network or stream work begins.
+- `EchoClient` rejects ports outside `1..65535` before network work begins, matching `ClientOptions`.
 - A timeout on a caller-supplied stream closes that stream because the request/response framing can no longer be safely reused.
 - Synchronous client methods reuse the async request path with a default or caller-supplied timeout.
 

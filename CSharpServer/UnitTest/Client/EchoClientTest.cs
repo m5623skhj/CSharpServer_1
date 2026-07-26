@@ -73,6 +73,18 @@ namespace UnitTest.Client
                 client.SendEchoRequest("127.0.0.1", 1, null!));
         }
 
+        [Theory]
+        [InlineData(0)]
+        [InlineData(65536)]
+        public void SendEchoRequest_WithHostAndPort_ThrowsArgumentOutOfRangeException_WhenPortIsInvalid(
+            int port)
+        {
+            var client = new EchoClient();
+
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+                client.SendEchoRequest("127.0.0.1", port, "hello"));
+        }
+
         [Fact]
         public async Task SendEchoRequestAsync_ThrowsTimeoutException_WhenRequestDoesNotCompleteBeforeTimeout()
         {

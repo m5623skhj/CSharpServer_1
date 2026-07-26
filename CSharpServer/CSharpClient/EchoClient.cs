@@ -57,7 +57,7 @@ public sealed class EchoClient
         string message,
         CancellationToken cancellationToken)
     {
-        ValidateHostRequest(host, message);
+        ValidateHostRequest(host, port, message);
 
         using var client = new TcpClient();
         await client.ConnectAsync(host, port, cancellationToken).ConfigureAwait(false);
@@ -128,10 +128,14 @@ public sealed class EchoClient
         }
     }
 
-    private static void ValidateHostRequest(string host, string message)
+    private static void ValidateHostRequest(string host, int port, string message)
     {
         ArgumentNullException.ThrowIfNull(host);
         ArgumentNullException.ThrowIfNull(message);
+        if (port is < 1 or > 65535)
+        {
+            throw new ArgumentOutOfRangeException(nameof(port));
+        }
     }
 
     private static TimeoutException CreateTimeoutException(OperationCanceledException exception)
