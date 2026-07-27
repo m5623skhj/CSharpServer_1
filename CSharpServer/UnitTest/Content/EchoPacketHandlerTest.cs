@@ -23,5 +23,35 @@ namespace UnitTest.Content
             var sentPayload = Assert.Single(sentPayloads);
             Assert.Equal(payload, sentPayload);
         }
+
+        [Fact]
+        public void Handle_ThrowsArgumentNullException_WhenPayloadIsNull()
+        {
+            var sentPayloads = new List<byte[]>();
+            var handler = new EchoPacketHandler(sentPayloads.Add);
+
+            var exception = Assert.Throws<ArgumentNullException>(() =>
+                handler.Handle(null!));
+
+            Assert.Equal("payload", exception.ParamName);
+            Assert.Empty(sentPayloads);
+        }
+
+        [Fact]
+        public void HandleAsync_ThrowsArgumentNullException_WhenPayloadIsNull()
+        {
+            var sentPayloads = new List<byte[]>();
+            var handler = new EchoPacketHandler(sentPayloads.Add);
+
+            void HandleNullPayload()
+            {
+                _ = handler.HandleAsync(null!, CancellationToken.None);
+            }
+
+            var exception = Assert.Throws<ArgumentNullException>(HandleNullPayload);
+
+            Assert.Equal("payload", exception.ParamName);
+            Assert.Empty(sentPayloads);
+        }
     }
 }

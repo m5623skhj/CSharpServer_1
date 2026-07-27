@@ -20,11 +20,11 @@ Rejects null packet senders during construction.
 
 ### `Handle(byte[] payload)`
 
-Passes the received payload to the configured packet sender.
+Rejects a null payload, then passes the received payload to the configured packet sender.
 
 ### `HandleAsync(byte[] payload, CancellationToken cancellationToken)`
 
-Passes the payload to the configured asynchronous sender and propagates cancellation.
+Rejects a null payload, then passes the payload to the configured asynchronous sender and propagates cancellation.
 
 ## Notes
 

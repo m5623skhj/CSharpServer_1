@@ -29,11 +29,15 @@ namespace CSharpServer.Content
 
         public void Handle(byte[] payload)
         {
+            ArgumentNullException.ThrowIfNull(payload);
+
             packetSender(payload);
         }
 
         public ValueTask HandleAsync(byte[] payload, CancellationToken cancellationToken)
         {
+            ArgumentNullException.ThrowIfNull(payload);
+
             return asyncPacketSender(payload, cancellationToken);
         }
     }
