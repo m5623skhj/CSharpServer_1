@@ -18,6 +18,7 @@ Static factory for composing `EchoPacketHandler` and `StreamConnection`.
 
 ### `Create(Stream stream, int inBufferSize)`
 
+- Rejects a null stream and non-positive buffer sizes at the factory boundary.
 - Creates an `EchoPacketHandler`.
 - Creates one `StreamConnectionTransport` for the stream.
 - Creates a `StreamConnection`.

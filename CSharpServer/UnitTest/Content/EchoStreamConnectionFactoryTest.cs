@@ -6,6 +6,29 @@ namespace UnitTest.Content
     public class EchoStreamConnectionFactoryTest
     {
         [Fact]
+        public void Create_ThrowsArgumentNullException_WhenStreamIsNull()
+        {
+            var exception = Assert.Throws<ArgumentNullException>(() =>
+                EchoStreamConnectionFactory.Create(null!, inBufferSize: 16));
+
+            Assert.Equal("stream", exception.ParamName);
+        }
+
+        [Theory]
+        [InlineData(0)]
+        [InlineData(-1)]
+        public void Create_ThrowsArgumentOutOfRangeException_WhenBufferSizeIsNotPositive(
+            int inBufferSize)
+        {
+            using var stream = new MemoryStream();
+
+            var exception = Assert.Throws<ArgumentOutOfRangeException>(() =>
+                EchoStreamConnectionFactory.Create(stream, inBufferSize));
+
+            Assert.Equal("inBufferSize", exception.ParamName);
+        }
+
+        [Fact]
         public void Create_ReturnsConnectionThatWritesEchoPacketToStream()
         {
             var payload = new byte[] { 0x68, 0x65, 0x6C, 0x6C, 0x6F };

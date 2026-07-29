@@ -7,6 +7,9 @@ namespace CSharpServer.Content
     {
         public static StreamConnection Create(Stream stream, int inBufferSize)
         {
+            ArgumentNullException.ThrowIfNull(stream);
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(inBufferSize);
+
             var transport = new StreamConnectionTransport(stream);
             var echoHandler = new EchoPacketHandler(
                 payload => transport.Send(PacketEncoder.Encode(payload)),

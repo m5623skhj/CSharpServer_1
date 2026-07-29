@@ -104,6 +104,7 @@ The content layer defines what to do with decoded payloads.
 
 - `EchoPacketHandler` sends the same payload back.
 - `EchoPacketHandler` rejects null payloads before invoking synchronous or asynchronous senders.
+- `EchoStreamConnectionFactory` rejects null streams and non-positive buffer sizes before composing network objects.
 - `EchoStreamConnectionFactory` wires echo behavior into a `StreamConnection` using one shared transport for echo, send, and close operations.
 
 ## Client Layers

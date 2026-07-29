@@ -20,6 +20,8 @@ Test-only stream that rejects sync writes and records async writes.
 
 ## Test Coverage
 
+- Null streams are rejected at the factory boundary.
+- Zero and negative buffer sizes are rejected at the factory boundary.
 - Factory-created connection reads an encoded packet from a stream.
 - The same encoded packet is written back to the stream.
 - Echo responses and explicit connection sends use the same stream transport.
