@@ -20,6 +20,8 @@ The public constructor creates a `StreamConnectionTransport` for the supplied st
 
 An internal composition constructor accepts an existing transport so factories can share one transport between content handlers and the internal `Connection`.
 
+Construction rejects null streams, non-positive buffer sizes, and null packet handlers before composing the reader and connection.
+
 ## Public Methods
 
 ### `ReadOnce()`

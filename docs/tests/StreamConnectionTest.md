@@ -24,6 +24,8 @@ Test-only stream that keeps an asynchronous read pending until cancellation.
 
 ## Test Coverage
 
+- Construction rejects null streams and packet handlers.
+- Construction rejects zero and negative buffer sizes.
 - `ReadOnce` reads an encoded packet and invokes the payload handler.
 - `ReadUntilEnd` handles packets split across multiple reads.
 - `ReadUntilEndAsync` handles packets split across multiple asynchronous reads.

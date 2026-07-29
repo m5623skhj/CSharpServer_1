@@ -7,6 +7,40 @@ namespace UnitTest.Network
     public class StreamConnectionTest
     {
         [Fact]
+        public void Constructor_ThrowsArgumentNullException_WhenStreamIsNull()
+        {
+            var exception = Assert.Throws<ArgumentNullException>(() =>
+                new StreamConnection(null!, inBufferSize: 16, _ => { }));
+
+            Assert.Equal("stream", exception.ParamName);
+        }
+
+        [Theory]
+        [InlineData(0)]
+        [InlineData(-1)]
+        public void Constructor_ThrowsArgumentOutOfRangeException_WhenBufferSizeIsNotPositive(
+            int inBufferSize)
+        {
+            using var stream = new MemoryStream();
+
+            var exception = Assert.Throws<ArgumentOutOfRangeException>(() =>
+                new StreamConnection(stream, inBufferSize, _ => { }));
+
+            Assert.Equal("inBufferSize", exception.ParamName);
+        }
+
+        [Fact]
+        public void Constructor_ThrowsArgumentNullException_WhenPacketHandlerIsNull()
+        {
+            using var stream = new MemoryStream();
+
+            var exception = Assert.Throws<ArgumentNullException>(() =>
+                new StreamConnection(stream, inBufferSize: 16, null!));
+
+            Assert.Equal("packetHandler", exception.ParamName);
+        }
+
+        [Fact]
         public void ReadOnce_InvokesPacketHandler_WhenPacketIsReadFromStream()
         {
             var payload = new byte[] { 0x68, 0x65, 0x6C, 0x6C, 0x6F };

@@ -39,6 +39,10 @@ namespace CSharpServer.Network
             Func<byte[], CancellationToken, ValueTask> asyncPacketHandler,
             IConnectionTransport transport)
         {
+            ArgumentNullException.ThrowIfNull(stream);
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(inBufferSize);
+            ArgumentNullException.ThrowIfNull(packetHandler);
+
             connection = new Connection(transport, packetHandler, asyncPacketHandler);
             reader = new StreamConnectionReader(
                 stream,

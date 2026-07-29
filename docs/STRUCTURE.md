@@ -80,6 +80,7 @@ The network layer adapts byte streams and TCP connections into packet sessions.
 - `StreamConnectionTransport.Send(byte[])` rejects null byte arrays before stream writes.
 - Concurrent echo processing propagates cancellation through packet handlers and async stream writes.
 - `StreamConnection` composes stream reader, transport, and connection.
+- `StreamConnection` rejects null streams and packet handlers plus non-positive buffer sizes before composition.
 - `ServerOptions` validates executable arguments before listener startup.
 - `ServerOptions` rejects null argument arrays before reading parser state.
 - `ServerOptions` supplies the concurrent client limit and client idle timeout.
