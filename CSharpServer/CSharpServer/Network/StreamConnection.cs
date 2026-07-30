@@ -79,25 +79,8 @@ namespace CSharpServer.Network
                 throw new ArgumentOutOfRangeException(nameof(idleTimeout));
             }
 
-            while (true)
+            while (await reader.ReadOnceAsync(cancellationToken, idleTimeout))
             {
-                using var idleCancellation = CancellationTokenSource.CreateLinkedTokenSource(
-                    cancellationToken);
-                idleCancellation.CancelAfter(idleTimeout);
-
-                try
-                {
-                    if (!await reader.ReadOnceAsync(idleCancellation.Token))
-                    {
-                        return;
-                    }
-                }
-                catch (OperationCanceledException)
-                    when (!cancellationToken.IsCancellationRequested
-                        && idleCancellation.IsCancellationRequested)
-                {
-                    return;
-                }
             }
         }
 

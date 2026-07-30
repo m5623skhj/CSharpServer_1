@@ -30,6 +30,9 @@ Test-only stream that keeps an asynchronous read pending until cancellation.
 - `ReadUntilEnd` handles packets split across multiple reads.
 - `ReadUntilEndAsync` handles packets split across multiple asynchronous reads.
 - `ReadUntilEndAsync` stops waiting and propagates cancellation.
+- The idle-timeout overload returns normally when a stream read remains idle.
+- The idle-timeout overload still propagates caller-requested cancellation.
+- Packet handlers receive the caller token rather than the read-only idle timeout token.
 - Echo handler wiring writes the same encoded packet back to the stream.
 - `Send` writes an encoded packet to the stream.
 - `Close` closes the stream.

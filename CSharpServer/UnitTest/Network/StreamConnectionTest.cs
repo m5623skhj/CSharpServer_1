@@ -98,6 +98,62 @@ namespace UnitTest.Network
         }
 
         [Fact]
+        public async Task ReadUntilEndAsync_WithIdleTimeout_PassesCallerCancellationToPacketHandler()
+        {
+            var payload = new byte[] { 0x68, 0x65, 0x6C, 0x6C, 0x6F };
+            using var stream = new MemoryStream(PacketEncoder.Encode(payload));
+            using var cancellation = new CancellationTokenSource();
+            var handlerCancellationToken = CancellationToken.None;
+            var transport = new StreamConnectionTransport(Stream.Null);
+            var connection = new StreamConnection(
+                stream,
+                inBufferSize: 16,
+                _ => { },
+                (_, cancellationToken) =>
+                {
+                    handlerCancellationToken = cancellationToken;
+                    return ValueTask.CompletedTask;
+                },
+                transport);
+
+            await connection.ReadUntilEndAsync(
+                cancellation.Token,
+                idleTimeout: TimeSpan.FromSeconds(1));
+
+            Assert.Equal(cancellation.Token, handlerCancellationToken);
+        }
+
+        [Fact]
+        public async Task ReadUntilEndAsync_WithIdleTimeout_ReturnsWhenReadIsIdle()
+        {
+            using var stream = new CancellationAwareReadStream();
+            var connection = new StreamConnection(stream, inBufferSize: 16, _ => { });
+
+            var readTask = connection.ReadUntilEndAsync(
+                CancellationToken.None,
+                idleTimeout: TimeSpan.FromMilliseconds(50));
+
+            await stream.ReadStarted.Task.WaitAsync(TimeSpan.FromSeconds(1));
+            await readTask.WaitAsync(TimeSpan.FromSeconds(1));
+        }
+
+        [Fact]
+        public async Task ReadUntilEndAsync_WithIdleTimeout_PropagatesCallerCancellation()
+        {
+            using var stream = new CancellationAwareReadStream();
+            using var cancellation = new CancellationTokenSource();
+            var connection = new StreamConnection(stream, inBufferSize: 16, _ => { });
+            var readTask = connection.ReadUntilEndAsync(
+                cancellation.Token,
+                idleTimeout: TimeSpan.FromSeconds(5));
+
+            await stream.ReadStarted.Task.WaitAsync(TimeSpan.FromSeconds(1));
+            await cancellation.CancelAsync();
+
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => readTask);
+        }
+
+        [Fact]
         public void ReadOnce_WritesEchoPacketToStream_WhenEchoHandlerIsUsed()
         {
             var payload = new byte[] { 0x68, 0x65, 0x6C, 0x6C, 0x6F };

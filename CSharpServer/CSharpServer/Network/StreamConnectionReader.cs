@@ -73,6 +73,50 @@ namespace CSharpServer.Network
             }
         }
 
+        internal async Task<bool> ReadOnceAsync(
+            CancellationToken cancellationToken,
+            TimeSpan idleTimeout)
+        {
+            if (idleTimeout <= TimeSpan.Zero)
+            {
+                throw new ArgumentOutOfRangeException(nameof(idleTimeout));
+            }
+
+            await readSemaphore.WaitAsync(cancellationToken);
+            try
+            {
+                using var idleCancellation =
+                    CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                idleCancellation.CancelAfter(idleTimeout);
+
+                int readCount;
+                try
+                {
+                    readCount = await stream.ReadAsync(buffer, idleCancellation.Token);
+                }
+                catch (OperationCanceledException)
+                    when (!cancellationToken.IsCancellationRequested
+                        && idleCancellation.IsCancellationRequested)
+                {
+                    return false;
+                }
+
+                if (readCount == 0)
+                {
+                    return false;
+                }
+
+                await asyncDataHandler(
+                    buffer.AsMemory(0, readCount),
+                    cancellationToken);
+                return true;
+            }
+            finally
+            {
+                readSemaphore.Release();
+            }
+        }
+
         private bool HandleRead(byte[] readBuffer, int readCount)
         {
             if (readCount == 0)
