@@ -22,6 +22,10 @@ Test-only stream that records disposal.
 
 Test-only stream that keeps an asynchronous read pending until cancellation.
 
+### `AsyncWriteTrackingStream`
+
+Test-only stream that rejects synchronous writes and records asynchronous write data and cancellation.
+
 ## Test Coverage
 
 - Construction rejects null streams and packet handlers.
@@ -35,4 +39,6 @@ Test-only stream that keeps an asynchronous read pending until cancellation.
 - Packet handlers receive the caller token rather than the read-only idle timeout token.
 - Echo handler wiring writes the same encoded packet back to the stream.
 - `Send` writes an encoded packet to the stream.
+- `Send` and `SendAsync` reject null payloads.
+- `SendAsync` writes the encoded packet asynchronously and forwards the caller cancellation token.
 - `Close` closes the stream.

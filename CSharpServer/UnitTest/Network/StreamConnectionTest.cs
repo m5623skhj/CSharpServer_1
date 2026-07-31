@@ -181,6 +181,48 @@ namespace UnitTest.Network
         }
 
         [Fact]
+        public void Send_ThrowsArgumentNullException_WhenPayloadIsNull()
+        {
+            using var stream = new MemoryStream();
+            var connection = new StreamConnection(stream, inBufferSize: 16, _ => { });
+
+            var exception = Assert.Throws<ArgumentNullException>(() =>
+                connection.Send(null!));
+
+            Assert.Equal("payload", exception.ParamName);
+        }
+
+        [Fact]
+        public void SendAsync_ThrowsArgumentNullException_WhenPayloadIsNull()
+        {
+            using var stream = new MemoryStream();
+            var connection = new StreamConnection(stream, inBufferSize: 16, _ => { });
+
+            void SendNullPayload()
+            {
+                _ = connection.SendAsync(null!, CancellationToken.None);
+            }
+
+            var exception = Assert.Throws<ArgumentNullException>(SendNullPayload);
+
+            Assert.Equal("payload", exception.ParamName);
+        }
+
+        [Fact]
+        public async Task SendAsync_WritesEncodedPacketAndPassesCancellationToken()
+        {
+            var payload = new byte[] { 0x68, 0x65, 0x6C, 0x6C, 0x6F };
+            using var stream = new AsyncWriteTrackingStream();
+            using var cancellation = new CancellationTokenSource();
+            var connection = new StreamConnection(stream, inBufferSize: 16, _ => { });
+
+            await connection.SendAsync(payload, cancellation.Token);
+
+            Assert.Equal(PacketEncoder.Encode(payload), stream.WrittenData);
+            Assert.Equal(cancellation.Token, stream.WriteCancellationToken);
+        }
+
+        [Fact]
         public void Close_ClosesStream()
         {
             using var stream = new TrackingStream();
@@ -199,6 +241,26 @@ namespace UnitTest.Network
             {
                 IsDisposed = true;
                 base.Dispose(disposing);
+            }
+        }
+
+        private sealed class AsyncWriteTrackingStream : MemoryStream
+        {
+            public byte[] WrittenData { get; private set; } = [];
+            public CancellationToken WriteCancellationToken { get; private set; }
+
+            public override void Write(byte[] buffer, int offset, int count)
+            {
+                throw new InvalidOperationException("Synchronous writes are not expected.");
+            }
+
+            public override ValueTask WriteAsync(
+                ReadOnlyMemory<byte> buffer,
+                CancellationToken cancellationToken = default)
+            {
+                WrittenData = buffer.ToArray();
+                WriteCancellationToken = cancellationToken;
+                return ValueTask.CompletedTask;
             }
         }
 

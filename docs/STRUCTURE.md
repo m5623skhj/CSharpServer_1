@@ -78,6 +78,7 @@ The network layer adapts byte streams and TCP connections into packet sessions.
 - `StreamConnectionTransport` serializes sync and async writes while allowing close to interrupt a blocked write.
 - `StreamConnectionTransport` rejects a null stream at construction so transport failures fail at the API boundary.
 - `StreamConnectionTransport.Send(byte[])` rejects null byte arrays before stream writes.
+- `StreamConnection` sync and async send paths reject null payloads, encode them, and preserve caller cancellation for asynchronous writes.
 - Concurrent echo processing propagates cancellation through packet handlers and async stream writes.
 - `StreamConnection` composes stream reader, transport, and connection.
 - `StreamConnection` rejects null streams and packet handlers plus non-positive buffer sizes before composition.

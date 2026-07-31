@@ -47,11 +47,11 @@ Repeatedly awaits `StreamConnectionReader.ReadOnceAsync` until EOF and propagate
 
 ### `Send(byte[] payload)`
 
-Sends a payload through the internal `Connection`.
+Rejects a null payload and sends an encoded packet through the internal `Connection`.
 
 ### `SendAsync(byte[] payload, CancellationToken cancellationToken)`
 
-Sends a payload through the cancellation-aware asynchronous connection path.
+Rejects a null payload, sends an encoded packet through the asynchronous connection path, and passes the caller cancellation token to the stream write.
 
 ### `Close()`
 
