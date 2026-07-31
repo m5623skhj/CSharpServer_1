@@ -12,6 +12,22 @@ The client must follow the same TDD practice as the server:
 
 This rule applies to shared protocol behavior, packet encoding/decoding, connection handling, echo behavior, and future client/server interaction features.
 
+## Automatic Post-Change Review
+
+After completing any code modification, the agent must automatically review the completed change before reporting the work as finished. A separate user request for this review is not required.
+
+Passing tests alone is not sufficient. The review must inspect the actual diff and verify all of the following:
+
+1. **Regression impact:** Identify affected callers, shared APIs, protocol behavior, client/server counterparts, tests, and documentation. Confirm that existing behavior outside the requested scope remains unchanged.
+2. **Code placement:** Confirm that each change belongs in the selected class, layer, and file, follows existing dependency direction, and does not introduce unnecessary coupling or misplaced responsibility.
+3. **Logical correctness:** Recheck assumptions, boundary conditions, exception behavior, cancellation flow, resource lifetime, and error propagation against the intended behavior.
+4. **Concurrency safety:** For asynchronous, socket, or shared-state changes, examine races, duplicate close/dispose paths, semaphore or lock balance, task observation, and cancellation timing.
+5. **Scope and simplicity:** Confirm that the diff contains only necessary changes, avoids unrelated refactoring, and does not add speculative abstraction or configuration.
+6. **Verification quality:** Confirm that tests cover the changed contract, would detect the relevant regression, and are not dependent on avoidable timing or scheduling assumptions. Run the relevant tests and the full build/test suite when appropriate.
+7. **Documentation consistency:** Confirm that file-level, test, protocol, and structure documents still match the implementation.
+
+The final report must state the post-change review result explicitly. If no issue is found, say so. If an issue is found within the already approved scope, correct it using the same test-first workflow and repeat the review. If correcting it would expand the agreed scope or materially change behavior, report the finding and obtain user approval before making the additional change.
+
 ## Documentation Updates
 
 When code is modified, the related Markdown documentation must be reviewed in the same workflow.
