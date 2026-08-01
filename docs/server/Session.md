@@ -30,7 +30,9 @@ Rejects null payload handlers and packet senders during construction.
 
 - Serializes async processing with synchronous receive calls.
 - Awaits decoded packet handlers in packet order.
-- Propagates cancellation to packet handling.
+- Passes the caller cancellation token to packet handlers.
+- Does not append receive data when cancellation occurs while waiting for the receive slot.
+- Releases the receive slot when packet handling fails or is canceled.
 
 ### `Send(byte[] payload)`
 
@@ -39,7 +41,7 @@ Rejects null payload handlers and packet senders during construction.
 
 ### `SendAsync(byte[] payload, CancellationToken cancellationToken)`
 
-Encodes the payload and sends it through the asynchronous packet sender.
+Encodes the payload and sends it through the asynchronous packet sender with the caller cancellation token.
 
 ## Notes
 

@@ -30,3 +30,7 @@ Test-only async handler that blocks the first callback and detects overlapping p
 - Concurrent async receive calls do not execute packet handlers at the same time.
 - The second async receive remains incomplete while the first handler owns the semaphore slot.
 - Concurrent receives verify the semaphore slot is restored afterward.
+- Async receive passes the decoded payload and caller cancellation token to the handler.
+- Cancellation while waiting for the receive slot does not buffer the canceled receive data.
+- Handler failure releases the receive slot so later packets can still be processed.
+- Async send passes the encoded packet and caller cancellation token to the sender.

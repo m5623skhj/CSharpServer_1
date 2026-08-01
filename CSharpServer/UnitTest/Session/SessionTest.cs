@@ -153,6 +153,144 @@ namespace UnitTest.Session
             Assert.Equal(1, session.AvailableReceiveSlotCount);
         }
 
+        [Fact]
+        public async Task ReceiveAsync_InvokesHandlerWithPayloadAndCancellationToken()
+        {
+            var payload = new byte[] { 0x68, 0x65, 0x6C, 0x6C, 0x6F };
+            using var cancellation = new CancellationTokenSource();
+            byte[]? receivedPayload = null;
+            var receivedCancellationToken = CancellationToken.None;
+            var session = new NetworkSession(
+                _ => { },
+                _ => { },
+                (packet, cancellationToken) =>
+                {
+                    receivedPayload = packet;
+                    receivedCancellationToken = cancellationToken;
+                    return ValueTask.CompletedTask;
+                },
+                (_, _) => ValueTask.CompletedTask);
+
+            await session.ReceiveAsync(
+                PacketEncoder.Encode(payload),
+                cancellation.Token);
+
+            Assert.Equal(payload, receivedPayload);
+            Assert.Equal(cancellation.Token, receivedCancellationToken);
+        }
+
+        [Fact]
+        public async Task SendAsync_InvokesSenderWithEncodedPacketAndCancellationToken()
+        {
+            var payload = new byte[] { 0x68, 0x65, 0x6C, 0x6C, 0x6F };
+            using var cancellation = new CancellationTokenSource();
+            byte[]? sentPacket = null;
+            var sentCancellationToken = CancellationToken.None;
+            var session = new NetworkSession(
+                _ => { },
+                _ => { },
+                (_, _) => ValueTask.CompletedTask,
+                (packet, cancellationToken) =>
+                {
+                    sentPacket = packet.ToArray();
+                    sentCancellationToken = cancellationToken;
+                    return ValueTask.CompletedTask;
+                });
+
+            await session.SendAsync(payload, cancellation.Token);
+
+            Assert.Equal(PacketEncoder.Encode(payload), sentPacket);
+            Assert.Equal(cancellation.Token, sentCancellationToken);
+        }
+
+        [Fact]
+        public async Task ReceiveAsync_DoesNotBufferData_WhenCanceledWhileWaitingForReceiveSlot()
+        {
+            var firstHandlerEntered = new TaskCompletionSource(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+            var allowFirstHandlerToComplete = new TaskCompletionSource(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+            var handledPayloads = new List<byte[]>();
+            var handlerInvocationCount = 0;
+            var session = new NetworkSession(
+                _ => { },
+                _ => { },
+                async (payload, cancellationToken) =>
+                {
+                    handledPayloads.Add(payload);
+                    if (Interlocked.Increment(ref handlerInvocationCount) == 1)
+                    {
+                        firstHandlerEntered.TrySetResult();
+                        await allowFirstHandlerToComplete.Task.WaitAsync(cancellationToken);
+                    }
+                },
+                (_, _) => ValueTask.CompletedTask);
+            var firstReceive = session.ReceiveAsync(
+                PacketEncoder.Encode([0x01]),
+                CancellationToken.None).AsTask();
+
+            await firstHandlerEntered.Task.WaitAsync(TimeSpan.FromSeconds(1));
+            using var secondCancellation = new CancellationTokenSource();
+            var secondReceive = session.ReceiveAsync(
+                PacketEncoder.Encode([0x02]),
+                secondCancellation.Token).AsTask();
+            await secondCancellation.CancelAsync();
+
+            try
+            {
+                await Assert.ThrowsAnyAsync<OperationCanceledException>(() => secondReceive);
+            }
+            finally
+            {
+                allowFirstHandlerToComplete.TrySetResult();
+                await firstReceive.WaitAsync(TimeSpan.FromSeconds(1));
+            }
+
+            await session.ReceiveAsync(ReadOnlyMemory<byte>.Empty, CancellationToken.None);
+
+            var handledPayload = Assert.Single(handledPayloads);
+            Assert.Equal(new byte[] { 0x01 }, handledPayload);
+            Assert.Equal(1, session.AvailableReceiveSlotCount);
+        }
+
+        [Fact]
+        public async Task ReceiveAsync_ReleasesReceiveSlot_WhenHandlerThrows()
+        {
+            var expectedException = new InvalidOperationException("Handler failed.");
+            var handledPayloads = new List<byte[]>();
+            var handlerInvocationCount = 0;
+            var session = new NetworkSession(
+                _ => { },
+                _ => { },
+                (payload, _) =>
+                {
+                    if (Interlocked.Increment(ref handlerInvocationCount) == 1)
+                    {
+                        return ValueTask.FromException(expectedException);
+                    }
+
+                    handledPayloads.Add(payload);
+                    return ValueTask.CompletedTask;
+                },
+                (_, _) => ValueTask.CompletedTask);
+
+            var actualException = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                session.ReceiveAsync(
+                    PacketEncoder.Encode([0x01]),
+                    CancellationToken.None).AsTask());
+
+            Assert.Same(expectedException, actualException);
+            Assert.Equal(1, session.AvailableReceiveSlotCount);
+
+            await session.ReceiveAsync(
+                PacketEncoder.Encode([0x02]),
+                CancellationToken.None);
+
+            var handledPayload = Assert.Single(handledPayloads);
+            Assert.Equal(new byte[] { 0x02 }, handledPayload);
+            Assert.Equal(1, session.AvailableReceiveSlotCount);
+        }
+
         private sealed class ConcurrentAsyncPacketHandler
         {
             private int activeHandlerCount;
