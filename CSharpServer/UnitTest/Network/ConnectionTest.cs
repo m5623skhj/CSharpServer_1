@@ -22,6 +22,15 @@ namespace UnitTest.Network
         }
 
         [Fact]
+        public void Constructor_ThrowsArgumentNullException_WhenAsyncPacketHandlerIsNull()
+        {
+            var transport = new FakeConnectionTransport();
+
+            Assert.Throws<ArgumentNullException>(() =>
+                new Connection(transport, _ => { }, null!));
+        }
+
+        [Fact]
         public void ReceiveFromTransport_InvokesPacketHandler_WhenCompletePacketIsReceived()
         {
             var payload = new byte[] { 0x68, 0x65, 0x6C, 0x6C, 0x6F };
@@ -33,6 +42,50 @@ namespace UnitTest.Network
 
             var receivedPacket = Assert.Single(receivedPackets);
             Assert.Equal(payload, receivedPacket);
+        }
+
+        [Fact]
+        public async Task ReceiveFromTransportAsync_InvokesHandlerWithPayloadAndCancellationToken()
+        {
+            var payload = new byte[] { 0x68, 0x65, 0x6C, 0x6C, 0x6F };
+            var transport = new FakeConnectionTransport();
+            using var cancellation = new CancellationTokenSource();
+            byte[]? receivedPayload = null;
+            var receivedCancellationToken = CancellationToken.None;
+            var connection = new Connection(
+                transport,
+                _ => { },
+                (packet, cancellationToken) =>
+                {
+                    receivedPayload = packet;
+                    receivedCancellationToken = cancellationToken;
+                    return ValueTask.CompletedTask;
+                });
+
+            await connection.ReceiveFromTransportAsync(
+                PacketEncoder.Encode(payload),
+                cancellation.Token);
+
+            Assert.Equal(payload, receivedPayload);
+            Assert.Equal(cancellation.Token, receivedCancellationToken);
+        }
+
+        [Fact]
+        public async Task ReceiveFromTransportAsync_PropagatesHandlerException()
+        {
+            var expectedException = new InvalidOperationException("Handler failed.");
+            var transport = new FakeConnectionTransport();
+            var connection = new Connection(
+                transport,
+                _ => { },
+                (_, _) => ValueTask.FromException(expectedException));
+
+            var actualException = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                connection.ReceiveFromTransportAsync(
+                    PacketEncoder.Encode([0x01]),
+                    CancellationToken.None).AsTask());
+
+            Assert.Same(expectedException, actualException);
         }
 
         [Fact]

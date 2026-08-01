@@ -72,7 +72,7 @@ The network layer adapts byte streams and TCP connections into packet sessions.
 - `Session` owns packet encoding/decoding around sync and async payload handlers and serializes receive processing.
 - `Session.Receive(byte[])` rejects null byte arrays before appending data to the packet buffer.
 - `Session`, `Connection`, `StreamConnectionReader`, and `EchoPacketHandler` reject null collaborators at construction.
-- `Connection` connects `Session` to a transport.
+- `Connection` connects `Session` to a transport and preserves async handler cancellation and failure propagation.
 - `StreamConnectionReader` serializes synchronous and asynchronous raw reads from a stream.
 - `StreamConnectionReader` reuses one read buffer and passes borrowed memory through the internal pipeline.
 - `StreamConnectionTransport` serializes sync and async writes while allowing close to interrupt a blocked write.

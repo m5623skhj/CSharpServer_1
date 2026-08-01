@@ -24,7 +24,7 @@ Passes raw bytes from the transport into the internal `Session`.
 
 ### `ReceiveFromTransportAsync(ReadOnlyMemory<byte> data, CancellationToken cancellationToken)`
 
-Passes raw bytes into asynchronous session processing and awaits packet handlers.
+Passes raw bytes into asynchronous session processing, forwards the caller cancellation token, and propagates packet handler failures.
 
 ### `Send(byte[] payload)`
 
