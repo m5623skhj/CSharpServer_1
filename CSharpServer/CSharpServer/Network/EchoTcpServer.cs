@@ -55,6 +55,11 @@ namespace CSharpServer.Network
             Func<TcpClient, CancellationToken, Task>? clientHandler)
         {
             ArgumentNullException.ThrowIfNull(ipAddress);
+            if (port is < 0 or > 65535)
+            {
+                throw new ArgumentOutOfRangeException(nameof(port));
+            }
+
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(inBufferSize);
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxConcurrentClients);
             if (clientIdleTimeout <= TimeSpan.Zero)

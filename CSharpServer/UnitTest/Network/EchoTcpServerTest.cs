@@ -308,6 +308,18 @@ namespace UnitTest.Network
             await serverTask.WaitAsync(TimeSpan.FromSeconds(5));
         }
 
+        [Theory]
+        [InlineData(-1)]
+        [InlineData(65536)]
+        public void Constructor_ThrowsArgumentOutOfRangeException_WhenPortIsOutsideRange(
+            int port)
+        {
+            var exception = Assert.Throws<ArgumentOutOfRangeException>(() =>
+                new EchoTcpServer(IPAddress.Loopback, port, inBufferSize: 2));
+
+            Assert.Equal("port", exception.ParamName);
+        }
+
         [Fact]
         public void Constructor_ThrowsArgumentOutOfRangeException_WhenBufferSizeIsZero()
         {

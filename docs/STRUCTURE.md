@@ -88,6 +88,7 @@ The network layer adapts byte streams and TCP connections into packet sessions.
 - `ServerApplication` owns listener startup and passes validated resource limits to the TCP server.
 - `ServerApplication` rejects null options before reading server configuration.
 - `EchoTcpServer` accepts TCP clients and handles each as an echo stream connection.
+- `EchoTcpServer` validates its bind port as `0..65535`, preserving port `0` for OS-assigned test and runtime binding.
 - `EchoTcpServer` can run either for a fixed client count or as a cancellable concurrent accept loop.
 - A semaphore bounds active client handlers, and slots are released on completion, failure, or cancellation.
 - Faulted handlers cancel the accept loop immediately and propagate their original exception.

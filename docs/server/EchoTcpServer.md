@@ -24,12 +24,14 @@ Wraps `TcpListener` and accepts echo clients either sequentially or concurrently
 - Stores the stream read buffer size.
 - Uses defaults of 100 concurrent clients and a 30-second client idle timeout.
 - Rejects a null IP address.
+- Accepts ports from `0` through `65535`, where `0` requests OS-assigned binding, and rejects values outside that range.
 - Rejects zero or negative buffer sizes.
 
 `EchoTcpServer(IPAddress ipAddress, int port, int inBufferSize, int maxConcurrentClients, TimeSpan clientIdleTimeout)`
 
 - Configures the maximum number of actively handled clients and the per-read idle timeout.
 - Rejects a null IP address.
+- Accepts ports from `0` through `65535` and rejects values outside that range.
 - Rejects zero or negative buffer size, connection limit, and idle timeout values.
 
 ### `Port`
