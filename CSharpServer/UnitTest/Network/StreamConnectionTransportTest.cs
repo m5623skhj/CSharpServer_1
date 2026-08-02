@@ -35,6 +35,18 @@ namespace UnitTest.Network
         }
 
         [Fact]
+        public void Send_ThrowsObjectDisposedException_WhenTransportIsClosed()
+        {
+            using var stream = new MemoryStream();
+            var transport = new StreamConnectionTransport(stream);
+            transport.Close();
+
+            Assert.Throws<ObjectDisposedException>(() =>
+                transport.Send([0x01]));
+            Assert.Equal(1, transport.AvailableSendSlotCount);
+        }
+
+        [Fact]
         public async Task SendAsync_PropagatesCancellationToStreamWrite()
         {
             using var stream = new CancellationAwareWriteStream();
@@ -48,6 +60,18 @@ namespace UnitTest.Network
             await cancellationTokenSource.CancelAsync();
 
             await Assert.ThrowsAnyAsync<OperationCanceledException>(() => sendTask);
+        }
+
+        [Fact]
+        public async Task SendAsync_ThrowsObjectDisposedException_WhenTransportIsClosed()
+        {
+            using var stream = new MemoryStream();
+            var transport = new StreamConnectionTransport(stream);
+            transport.Close();
+
+            await Assert.ThrowsAsync<ObjectDisposedException>(() =>
+                transport.SendAsync(new byte[] { 0x01 }, CancellationToken.None).AsTask());
+            Assert.Equal(1, transport.AvailableSendSlotCount);
         }
 
         [Fact]
