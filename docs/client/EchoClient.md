@@ -77,6 +77,10 @@ Sends a length-prefixed echo request and reads one length-prefixed response.
 - Closes the supplied stream after timeout because a partial or late response cannot be safely correlated with a later request.
 - Returns the response as a UTF-8 string.
 
+## Message Boundaries
+
+Empty messages are valid and are encoded as header-only packets. Messages whose UTF-8 representation is exactly `ProtocolLimits.MaxPayloadLength` bytes are also valid; only larger messages are rejected.
+
 ## Failure Behavior
 
 Throws `EndOfStreamException` if the stream closes before a complete response packet is received.

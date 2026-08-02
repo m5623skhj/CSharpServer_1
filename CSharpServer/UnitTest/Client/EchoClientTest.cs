@@ -25,6 +25,32 @@ namespace UnitTest.Client
         }
 
         [Fact]
+        public void SendEchoRequest_WithStream_AllowsEmptyMessage()
+        {
+            using var stream = new ScriptedStream(PacketEncoder.Encode([]));
+            var client = new EchoClient();
+
+            var response = client.SendEchoRequest(stream, string.Empty);
+
+            Assert.Equal(string.Empty, response);
+            Assert.Equal(PacketEncoder.Encode([]), stream.WrittenData);
+        }
+
+        [Fact]
+        public void SendEchoRequest_WithStream_AllowsMessageAtProtocolLimit()
+        {
+            var message = new string('a', ProtocolLimits.MaxPayloadLength);
+            var encodedPacket = PacketEncoder.Encode(Encoding.UTF8.GetBytes(message));
+            using var stream = new ScriptedStream(encodedPacket);
+            var client = new EchoClient();
+
+            var response = client.SendEchoRequest(stream, message);
+
+            Assert.Equal(message, response);
+            Assert.Equal(encodedPacket, stream.WrittenData);
+        }
+
+        [Fact]
         public void SendEchoRequest_ThrowsEndOfStreamException_WhenResponseIsNotReceived()
         {
             using var stream = new ScriptedStream([]);

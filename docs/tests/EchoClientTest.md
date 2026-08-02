@@ -26,6 +26,8 @@ Test-only stream that records writes, keeps async reads pending until cancellati
 
 - `SendEchoRequest` writes an encoded request packet.
 - `SendEchoRequest` decodes one encoded response packet.
+- The stream overload supports an empty message and header-only response packet.
+- The stream overload accepts a UTF-8 message exactly at `ProtocolLimits.MaxPayloadLength`.
 - `SendEchoRequest` throws `EndOfStreamException` when the stream closes before a response is received.
 - `SendEchoRequest` rejects a null caller-supplied stream.
 - `SendEchoRequest` rejects a null message before writing a stream request.

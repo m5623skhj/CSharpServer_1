@@ -23,6 +23,20 @@ namespace UnitTest.Network
         }
 
         [Fact]
+        public async Task AcceptAndHandleOnce_ReturnsEmptyEchoResponseToClient()
+        {
+            using var server = new EchoTcpServer(IPAddress.Loopback, port: 0, inBufferSize: 2);
+            server.Start();
+            var serverTask = Task.Run(server.AcceptAndHandleOnce);
+            var client = new EchoClient();
+
+            var response = client.SendEchoRequest("127.0.0.1", server.Port, string.Empty);
+
+            Assert.Equal(string.Empty, response);
+            await serverTask.WaitAsync(TimeSpan.FromSeconds(5));
+        }
+
+        [Fact]
         public async Task AcceptAndHandle_ReturnsEchoResponsesToMultipleClientsSequentially()
         {
             using var server = new EchoTcpServer(IPAddress.Loopback, port: 0, inBufferSize: 2);
