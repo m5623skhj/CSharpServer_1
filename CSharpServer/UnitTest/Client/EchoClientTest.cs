@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -60,6 +61,24 @@ namespace UnitTest.Client
             {
                 client.SendEchoRequest(stream, "hello");
             });
+        }
+
+        [Theory]
+        [InlineData(-1)]
+        [InlineData(ProtocolLimits.MaxPayloadLength + 1)]
+        public void SendEchoRequest_ThrowsInvalidDataException_WhenResponseLengthIsInvalid(
+            int responseLength)
+        {
+            var responseHeader = new byte[sizeof(int)];
+            BinaryPrimitives.WriteInt32LittleEndian(responseHeader, responseLength);
+            using var stream = new ScriptedStream(responseHeader);
+            var client = new EchoClient();
+
+            Assert.Throws<InvalidDataException>(() =>
+                client.SendEchoRequest(stream, "hello"));
+            Assert.Equal(
+                PacketEncoder.Encode(Encoding.UTF8.GetBytes("hello")),
+                stream.WrittenData);
         }
 
         [Fact]
