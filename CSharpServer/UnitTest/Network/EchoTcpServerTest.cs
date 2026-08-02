@@ -410,6 +410,64 @@ namespace UnitTest.Network
         }
 
         [Fact]
+        public void Dispose_CanBeCalledMultipleTimes()
+        {
+            var server = new EchoTcpServer(IPAddress.Loopback, port: 0, inBufferSize: 2);
+
+            server.Dispose();
+            var exception = Record.Exception(server.Dispose);
+
+            Assert.Null(exception);
+        }
+
+        [Fact]
+        public void Start_ThrowsObjectDisposedException_WhenServerIsDisposed()
+        {
+            var server = new EchoTcpServer(IPAddress.Loopback, port: 0, inBufferSize: 2);
+            server.Dispose();
+
+            Assert.Throws<ObjectDisposedException>(server.Start);
+        }
+
+        [Fact]
+        public void AcceptAndHandleOnce_ThrowsObjectDisposedException_WhenServerIsDisposed()
+        {
+            var server = new EchoTcpServer(IPAddress.Loopback, port: 0, inBufferSize: 2);
+            server.Dispose();
+
+            Assert.Throws<ObjectDisposedException>(server.AcceptAndHandleOnce);
+        }
+
+        [Fact]
+        public void AcceptAndHandle_ThrowsObjectDisposedException_WhenServerIsDisposed()
+        {
+            var server = new EchoTcpServer(IPAddress.Loopback, port: 0, inBufferSize: 2);
+            server.Dispose();
+
+            Assert.Throws<ObjectDisposedException>(() => server.AcceptAndHandle(clientCount: 1));
+        }
+
+        [Fact]
+        public async Task AcceptAndHandleConcurrently_WithClientCount_ThrowsObjectDisposedException_WhenServerIsDisposed()
+        {
+            var server = new EchoTcpServer(IPAddress.Loopback, port: 0, inBufferSize: 2);
+            server.Dispose();
+
+            await Assert.ThrowsAsync<ObjectDisposedException>(() =>
+                server.AcceptAndHandleConcurrently(clientCount: 1));
+        }
+
+        [Fact]
+        public async Task AcceptAndHandleConcurrently_WithCancellation_ThrowsObjectDisposedException_WhenServerIsDisposed()
+        {
+            var server = new EchoTcpServer(IPAddress.Loopback, port: 0, inBufferSize: 2);
+            server.Dispose();
+
+            await Assert.ThrowsAsync<ObjectDisposedException>(() =>
+                server.AcceptAndHandleConcurrently(CancellationToken.None));
+        }
+
+        [Fact]
         public void Dispose_DisposesClientSlots_WhenNoAcceptLoopIsRunning()
         {
             var server = new EchoTcpServer(IPAddress.Loopback, port: 0, inBufferSize: 2);

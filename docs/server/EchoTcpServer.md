@@ -105,3 +105,5 @@ Throws `ObjectDisposedException` if the server has already been disposed.
 ## Notes
 
 This server supports fixed client counts and a cancellable open-ended concurrent accept loop.
+
+After disposal, `Start` and every sequential or concurrent accept entry point reject further use with `ObjectDisposedException`.
