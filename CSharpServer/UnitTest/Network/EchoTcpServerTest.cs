@@ -320,13 +320,16 @@ namespace UnitTest.Network
             Assert.Equal("port", exception.ParamName);
         }
 
-        [Fact]
-        public void Constructor_ThrowsArgumentOutOfRangeException_WhenBufferSizeIsZero()
+        [Theory]
+        [InlineData(0)]
+        [InlineData(-1)]
+        public void Constructor_ThrowsArgumentOutOfRangeException_WhenBufferSizeIsNotPositive(
+            int inBufferSize)
         {
-            Assert.Throws<ArgumentOutOfRangeException>(() =>
-            {
-                new EchoTcpServer(IPAddress.Loopback, port: 0, inBufferSize: 0);
-            });
+            var exception = Assert.Throws<ArgumentOutOfRangeException>(() =>
+                new EchoTcpServer(IPAddress.Loopback, port: 0, inBufferSize));
+
+            Assert.Equal("inBufferSize", exception.ParamName);
         }
 
         [Fact]
@@ -337,32 +340,73 @@ namespace UnitTest.Network
             Assert.Equal("ipAddress", exception.ParamName);
         }
 
-        [Fact]
-        public void Constructor_ThrowsArgumentOutOfRangeException_WhenMaxConcurrentClientsIsZero()
+        [Theory]
+        [InlineData(0)]
+        [InlineData(-1)]
+        public void Constructor_ThrowsArgumentOutOfRangeException_WhenMaxConcurrentClientsIsNotPositive(
+            int maxConcurrentClients)
         {
-            Assert.Throws<ArgumentOutOfRangeException>(() =>
-            {
+            var exception = Assert.Throws<ArgumentOutOfRangeException>(() =>
                 new EchoTcpServer(
                     IPAddress.Loopback,
                     port: 0,
                     inBufferSize: 2,
-                    maxConcurrentClients: 0,
-                    clientIdleTimeout: TimeSpan.FromSeconds(1));
-            });
+                    maxConcurrentClients,
+                    clientIdleTimeout: TimeSpan.FromSeconds(1)));
+
+            Assert.Equal("maxConcurrentClients", exception.ParamName);
         }
 
-        [Fact]
-        public void Constructor_ThrowsArgumentOutOfRangeException_WhenClientIdleTimeoutIsZero()
+        [Theory]
+        [InlineData(0)]
+        [InlineData(-1)]
+        public void Constructor_ThrowsArgumentOutOfRangeException_WhenClientIdleTimeoutIsNotPositive(
+            int clientIdleTimeoutMilliseconds)
         {
-            Assert.Throws<ArgumentOutOfRangeException>(() =>
-            {
+            var exception = Assert.Throws<ArgumentOutOfRangeException>(() =>
                 new EchoTcpServer(
                     IPAddress.Loopback,
                     port: 0,
                     inBufferSize: 2,
                     maxConcurrentClients: 1,
-                    clientIdleTimeout: TimeSpan.Zero);
-            });
+                    clientIdleTimeout: TimeSpan.FromMilliseconds(
+                        clientIdleTimeoutMilliseconds)));
+
+            Assert.Equal("clientIdleTimeout", exception.ParamName);
+        }
+
+        [Theory]
+        [InlineData(0)]
+        [InlineData(-1)]
+        public void AcceptAndHandle_ThrowsArgumentOutOfRangeException_WhenClientCountIsNotPositive(
+            int clientCount)
+        {
+            using var server = new EchoTcpServer(
+                IPAddress.Loopback,
+                port: 0,
+                inBufferSize: 2);
+
+            var exception = Assert.Throws<ArgumentOutOfRangeException>(() =>
+                server.AcceptAndHandle(clientCount));
+
+            Assert.Equal("clientCount", exception.ParamName);
+        }
+
+        [Theory]
+        [InlineData(0)]
+        [InlineData(-1)]
+        public async Task AcceptAndHandleConcurrently_ThrowsArgumentOutOfRangeException_WhenClientCountIsNotPositive(
+            int clientCount)
+        {
+            using var server = new EchoTcpServer(
+                IPAddress.Loopback,
+                port: 0,
+                inBufferSize: 2);
+
+            var exception = await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
+                server.AcceptAndHandleConcurrently(clientCount));
+
+            Assert.Equal("clientCount", exception.ParamName);
         }
 
         [Fact]
