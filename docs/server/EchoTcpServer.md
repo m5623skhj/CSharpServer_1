@@ -44,6 +44,8 @@ Starts the TCP listener.
 
 Throws `ObjectDisposedException` if the server has already been disposed.
 
+Listener startup is serialized with disposal so a concurrent `Start` cannot reopen the listener after shutdown.
+
 ### `AcceptAndHandleOnce()`
 
 - Accepts one `TcpClient`.
@@ -80,6 +82,7 @@ Throws `ObjectDisposedException` if the server has already been disposed.
 ## Internal Behavior
 
 - Connection slots are returned from handler `finally` blocks, including failure and cancellation paths.
+- Listener start and stop operations share a lifecycle lock to preserve the disposed state during concurrent calls.
 - Synchronous handler completion retries deferred connection-slot disposal when shutdown began during handling.
 - Accepted clients are tracked at server scope until their handlers complete.
 - Slot waiters are counted internally so concurrency tests can prove that a second client is actually queued.

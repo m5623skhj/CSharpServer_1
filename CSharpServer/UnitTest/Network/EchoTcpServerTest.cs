@@ -444,6 +444,39 @@ namespace UnitTest.Network
         }
 
         [Fact]
+        public async Task Start_DoesNotRestartListener_WhenDisposeRunsConcurrently()
+        {
+            const int iterationCount = 1000;
+
+            for (var iteration = 0; iteration < iterationCount; iteration++)
+            {
+                var server = new EchoTcpServer(IPAddress.Loopback, port: 0, inBufferSize: 2);
+                using var startGate = new Barrier(participantCount: 3);
+                var startTask = Task.Run(() =>
+                {
+                    startGate.SignalAndWait();
+                    try
+                    {
+                        server.Start();
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                    }
+                });
+                var disposeTask = Task.Run(() =>
+                {
+                    startGate.SignalAndWait();
+                    server.Dispose();
+                });
+
+                startGate.SignalAndWait();
+                await Task.WhenAll(startTask, disposeTask);
+
+                Assert.Equal(0, server.Port);
+            }
+        }
+
+        [Fact]
         public void AcceptAndHandleOnce_ThrowsObjectDisposedException_WhenServerIsDisposed()
         {
             var server = new EchoTcpServer(IPAddress.Loopback, port: 0, inBufferSize: 2);

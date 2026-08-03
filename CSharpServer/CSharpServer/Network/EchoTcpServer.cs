@@ -15,6 +15,7 @@ namespace CSharpServer.Network
         private readonly CancellationToken disposeToken;
         private readonly List<TcpClient> activeClients = [];
         private readonly object activeClientsLock = new();
+        private readonly object lifecycleLock = new();
         private int activeClientCount;
         private int waitingClientSlotCount;
         private int disposeState;
@@ -90,8 +91,11 @@ namespace CSharpServer.Network
 
         public void Start()
         {
-            ThrowIfDisposed();
-            listener.Start();
+            lock (lifecycleLock)
+            {
+                ThrowIfDisposed();
+                listener.Start();
+            }
         }
 
         public void AcceptAndHandleOnce()
@@ -473,7 +477,11 @@ namespace CSharpServer.Network
             }
             finally
             {
-                listener.Stop();
+                lock (lifecycleLock)
+                {
+                    listener.Stop();
+                }
+
                 CloseActiveClients();
                 disposeCancellation.Dispose();
                 DisposeClientSlotsIfSafe();
