@@ -88,6 +88,8 @@ namespace CSharpServer.Network
         }
 
         internal int WaitingClientSlotCount => Volatile.Read(ref waitingClientSlotCount);
+        internal bool AreClientSlotsDisposed =>
+            Volatile.Read(ref clientSlotsDisposeState) != 0;
 
         public void Start()
         {
@@ -344,6 +346,7 @@ namespace CSharpServer.Network
                 UntrackClient(client);
                 Interlocked.Decrement(ref activeClientCount);
                 ReleaseClientSlot();
+                DisposeClientSlotsIfSafe();
             }
         }
 

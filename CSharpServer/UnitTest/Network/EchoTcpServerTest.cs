@@ -301,6 +301,40 @@ namespace UnitTest.Network
         }
 
         [Fact]
+        public async Task Dispose_DisposesClientSlots_WhenAsyncHandlerFaultsDuringShutdown()
+        {
+            var handlerEntered = new TaskCompletionSource(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+            var allowHandlerFailure = new TaskCompletionSource(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+            using var server = new EchoTcpServer(
+                IPAddress.Loopback,
+                port: 0,
+                inBufferSize: 2,
+                maxConcurrentClients: 1,
+                clientIdleTimeout: TimeSpan.FromSeconds(5),
+                clientHandler: async (_, _) =>
+                {
+                    handlerEntered.TrySetResult();
+                    await allowHandlerFailure.Task;
+                    throw new InvalidOperationException("handler failed");
+                });
+            using var client = new TcpClient();
+            server.Start();
+            var serverTask = server.AcceptAndHandleConcurrently(clientCount: 1);
+
+            await client.ConnectAsync(IPAddress.Loopback, server.Port);
+            await handlerEntered.Task.WaitAsync(TimeSpan.FromSeconds(1));
+            server.Dispose();
+            allowHandlerFailure.TrySetResult();
+
+            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                serverTask.WaitAsync(TimeSpan.FromSeconds(1)));
+            Assert.Equal("handler failed", exception.Message);
+            Assert.True(server.AreClientSlotsDisposed);
+        }
+
+        [Fact]
         public async Task AcceptAndHandleConcurrently_ContinuesAfterMalformedClientPacket()
         {
             using var server = new EchoTcpServer(IPAddress.Loopback, port: 0, inBufferSize: 2);

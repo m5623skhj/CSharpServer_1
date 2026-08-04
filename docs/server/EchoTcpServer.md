@@ -83,7 +83,7 @@ Listener startup is serialized with disposal so a concurrent `Start` cannot reop
 
 - Connection slots are returned from handler `finally` blocks, including failure and cancellation paths.
 - Listener start and stop operations share a lifecycle lock to preserve the disposed state during concurrent calls.
-- Synchronous handler completion retries deferred connection-slot disposal when shutdown began during handling.
+- Synchronous and asynchronous handler completion retry deferred connection-slot disposal when shutdown began during handling.
 - Accepted clients are tracked at server scope until their handlers complete.
 - Slot waiters are counted internally so concurrency tests can prove that a second client is actually queued.
 - Completed successful client handler tasks are pruned while the open-ended accept loop is running.
@@ -102,7 +102,7 @@ Listener startup is serialized with disposal so a concurrent `Start` cannot reop
 - Stops the listener and closes all accepted active clients.
 - Disposes cancellation and connection-slot resources.
 - Allows active handler tasks to complete during shutdown without surfacing slot-release disposal races.
-- Retries deferred connection-slot disposal after synchronous handlers leave their active section.
+- Retries deferred connection-slot disposal after handlers leave their active section, including faulted asynchronous handlers.
 - Is idempotent.
 
 ## Notes

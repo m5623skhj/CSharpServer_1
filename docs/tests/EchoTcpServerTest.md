@@ -39,6 +39,7 @@ Verifies `EchoTcpServer` and `EchoClient` integration over loopback TCP.
 - Verifies that sequential and fixed-count concurrent accept methods reject zero or negative client counts before accepting clients.
 - Verifies that disposal makes connection slot state unavailable when no accept loop is running.
 - Verifies that disposal also makes connection slot state unavailable after a synchronous handler completes.
+- Verifies that disposal of connection slots is retried when an asynchronous handler faults during shutdown.
 - Verifies that disposal is idempotent.
 - Verifies that start plus all sequential and concurrent accept entry points reject calls after disposal.
 - Repeats concurrent start and disposal to verify that shutdown cannot leave the listener reopened.
