@@ -75,6 +75,7 @@ Sends a length-prefixed echo request and reads one length-prefixed response.
 - Reads one response packet asynchronously.
 - Cancels the wait when the timeout expires.
 - Closes the supplied stream after timeout because a partial or late response cannot be safely correlated with a later request.
+- Preserves `TimeoutException` as the primary failure if closing the supplied stream also fails, while retaining both underlying exceptions.
 - Returns the response as a UTF-8 string.
 
 ## Message Boundaries
@@ -88,6 +89,8 @@ Throws `EndOfStreamException` if the stream closes before a complete response pa
 Throws `InvalidDataException` when a response contains an invalid packet length.
 
 The TimeSpan overloads throw `TimeoutException` if the complete request does not finish before the configured timeout.
+
+If caller-owned stream cleanup also fails after timeout, the `TimeoutException` contains an `AggregateException` with both the original cancellation and close failure.
 
 Caller-owned streams must be treated as unusable after a request timeout. The client closes them to enforce this protocol boundary.
 

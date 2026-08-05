@@ -96,7 +96,16 @@ public sealed class EchoClient
         catch (OperationCanceledException exception)
             when (cancellationTokenSource.IsCancellationRequested)
         {
-            stream.Close();
+            try
+            {
+                stream.Close();
+            }
+            catch (Exception closeException)
+            {
+                throw CreateTimeoutException(
+                    new AggregateException(exception, closeException));
+            }
+
             throw CreateTimeoutException(exception);
         }
     }
@@ -158,7 +167,7 @@ public sealed class EchoClient
             nameof(message));
     }
 
-    private static TimeoutException CreateTimeoutException(OperationCanceledException exception)
+    private static TimeoutException CreateTimeoutException(Exception exception)
     {
         return new TimeoutException("Echo request did not complete before timeout.", exception);
     }

@@ -179,9 +179,27 @@ namespace UnitTest.Client
                 client.SendEchoRequestAsync(stream, "hello", TimeSpan.FromMilliseconds(50)));
 
             Assert.Contains("request", exception.Message);
+            Assert.IsAssignableFrom<OperationCanceledException>(exception.InnerException);
             Assert.Equal(
                 PacketEncoder.Encode(Encoding.UTF8.GetBytes("hello")),
                 stream.WrittenData);
+            Assert.True(stream.IsDisposed);
+        }
+
+        [Fact]
+        public async Task SendEchoRequestAsync_PreservesTimeoutException_WhenStreamCloseThrows()
+        {
+            var stream = new WaitingReadStream(throwOnDispose: true);
+            var client = new EchoClient();
+
+            var exception = await Assert.ThrowsAsync<TimeoutException>(() =>
+                client.SendEchoRequestAsync(stream, "hello", TimeSpan.FromMilliseconds(50)));
+
+            var innerException = Assert.IsType<AggregateException>(exception.InnerException);
+            Assert.Collection(
+                innerException.InnerExceptions,
+                item => Assert.IsAssignableFrom<OperationCanceledException>(item),
+                item => Assert.IsType<IOException>(item));
             Assert.True(stream.IsDisposed);
         }
 
@@ -319,6 +337,12 @@ namespace UnitTest.Client
         private sealed class WaitingReadStream : Stream
         {
             private readonly MemoryStream writeStream = new();
+            private readonly bool throwOnDispose;
+
+            public WaitingReadStream(bool throwOnDispose = false)
+            {
+                this.throwOnDispose = throwOnDispose;
+            }
 
             public byte[] WrittenData => writeStream.ToArray();
             public bool IsDisposed { get; private set; }
@@ -383,6 +407,10 @@ namespace UnitTest.Client
                 }
 
                 base.Dispose(disposing);
+                if (disposing && throwOnDispose)
+                {
+                    throw new IOException("close failed");
+                }
             }
         }
     }
