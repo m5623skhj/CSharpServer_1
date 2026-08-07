@@ -2,6 +2,8 @@ namespace CSharpServer.Network
 {
     public sealed class StreamConnectionReader
     {
+        private static readonly TimeSpan MaxTimerDelay =
+            TimeSpan.FromMilliseconds(uint.MaxValue - 1);
         private readonly Stream stream;
         private readonly byte[] buffer;
         private readonly Action<ReadOnlyMemory<byte>> dataHandler;
@@ -77,7 +79,7 @@ namespace CSharpServer.Network
             CancellationToken cancellationToken,
             TimeSpan idleTimeout)
         {
-            if (idleTimeout <= TimeSpan.Zero)
+            if (idleTimeout <= TimeSpan.Zero || idleTimeout > MaxTimerDelay)
             {
                 throw new ArgumentOutOfRangeException(nameof(idleTimeout));
             }

@@ -35,7 +35,8 @@ Verifies `EchoTcpServer` and `EchoClient` integration over loopback TCP.
 - Verifies that an unexpected client handler fault stops accept processing and propagates immediately.
 - Verifies that fixed-count mode propagates a handler fault without waiting for the remaining clients to connect.
 - Verifies that a malformed client packet does not prevent later clients from receiving echo responses.
-- Verifies that out-of-range ports, null IP address, and zero or negative buffer size, connection limit, and idle timeout are rejected by the server constructor.
+- Verifies that out-of-range ports, null IP address, zero or negative buffer size and connection limit, and unsupported idle timeouts are rejected by the server constructor.
+- Verifies that the server constructor accepts an idle timeout exactly at the .NET timer limit and rejects larger values.
 - Verifies that sequential and fixed-count concurrent accept methods reject zero or negative client counts before accepting clients.
 - Verifies that disposal makes connection slot state unavailable when no accept loop is running.
 - Verifies that disposal also makes connection slot state unavailable after a synchronous handler completes.

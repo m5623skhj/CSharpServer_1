@@ -48,7 +48,7 @@ Sends a length-prefixed echo request and reads one length-prefixed response.
 
 ### `SendEchoRequestAsync(string host, int port, string message, TimeSpan requestTimeout)`
 
-- Rejects zero or negative timeout values before opening a connection.
+- Rejects zero, negative, or .NET timer-limit-exceeding timeout values before opening a connection.
 - Rejects a null host or message before opening a connection.
 - Rejects empty or whitespace-only hosts before opening a connection.
 - Rejects ports outside `1..65535` before opening a connection.
@@ -68,7 +68,7 @@ Sends a length-prefixed echo request and reads one length-prefixed response.
 
 ### `SendEchoRequestAsync(Stream stream, string message, TimeSpan requestTimeout)`
 
-- Rejects zero or negative timeout values.
+- Rejects zero, negative, or .NET timer-limit-exceeding timeout values before writing the request.
 - Rejects a null stream or message before writing the request.
 - Rejects messages larger than `ProtocolLimits.MaxPayloadLength` when encoded as UTF-8 before allocating the payload.
 - Encodes and writes one echo request packet asynchronously.
@@ -89,6 +89,8 @@ Throws `EndOfStreamException` if the stream closes before a complete response pa
 Throws `InvalidDataException` when a response contains an invalid packet length.
 
 The TimeSpan overloads throw `TimeoutException` if the complete request does not finish before the configured timeout.
+
+Timeout values up to `UInt32.MaxValue - 1` milliseconds are supported; larger values are rejected with the caller-facing timeout parameter name.
 
 If caller-owned stream cleanup also fails after timeout, the `TimeoutException` contains an `AggregateException` with both the original cancellation and close failure.
 

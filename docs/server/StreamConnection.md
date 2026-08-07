@@ -43,7 +43,8 @@ Repeatedly awaits `StreamConnectionReader.ReadOnceAsync` until EOF and propagate
 - Returns normally when the idle timeout expires.
 - Passes the original caller cancellation token to packet handlers and asynchronous writes.
 - Continues to propagate caller-requested cancellation during reads and handlers.
-- Rejects a zero or negative idle timeout.
+- Accepts idle timeouts up to `UInt32.MaxValue - 1` milliseconds.
+- Rejects zero, negative, or .NET timer-limit-exceeding idle timeouts before reading.
 
 ### `Send(byte[] payload)`
 

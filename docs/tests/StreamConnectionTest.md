@@ -37,6 +37,7 @@ Test-only stream that rejects synchronous writes and records asynchronous write 
 - The idle-timeout overload returns normally when a stream read remains idle.
 - The idle-timeout overload still propagates caller-requested cancellation.
 - Packet handlers receive the caller token rather than the read-only idle timeout token.
+- The idle-timeout overload accepts the .NET timer maximum and rejects larger values before reading.
 - Echo handler wiring writes the same encoded packet back to the stream.
 - `Send` writes an encoded packet to the stream.
 - `Send` and `SendAsync` reject null payloads.

@@ -32,7 +32,8 @@ Wraps `TcpListener` and accepts echo clients either sequentially or concurrently
 - Configures the maximum number of actively handled clients and the per-read idle timeout.
 - Rejects a null IP address.
 - Accepts ports from `0` through `65535` and rejects values outside that range.
-- Rejects zero or negative buffer size, connection limit, and idle timeout values.
+- Rejects zero or negative buffer size and connection limit values.
+- Rejects zero, negative, or .NET timer-limit-exceeding idle timeout values.
 
 ### `Port`
 

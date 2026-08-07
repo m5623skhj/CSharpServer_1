@@ -423,6 +423,31 @@ namespace UnitTest.Network
             Assert.Equal("clientIdleTimeout", exception.ParamName);
         }
 
+        [Fact]
+        public void Constructor_ThrowsArgumentOutOfRangeException_WhenClientIdleTimeoutExceedsTimerLimit()
+        {
+            var exception = Assert.Throws<ArgumentOutOfRangeException>(() =>
+                new EchoTcpServer(
+                    IPAddress.Loopback,
+                    port: 0,
+                    inBufferSize: 2,
+                    maxConcurrentClients: 1,
+                    clientIdleTimeout: TimeSpan.MaxValue));
+
+            Assert.Equal("clientIdleTimeout", exception.ParamName);
+        }
+
+        [Fact]
+        public void Constructor_AllowsClientIdleTimeoutAtTimerLimit()
+        {
+            using var server = new EchoTcpServer(
+                IPAddress.Loopback,
+                port: 0,
+                inBufferSize: 2,
+                maxConcurrentClients: 1,
+                clientIdleTimeout: TimeSpan.FromMilliseconds(uint.MaxValue - 1));
+        }
+
         [Theory]
         [InlineData(0)]
         [InlineData(-1)]

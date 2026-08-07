@@ -6,6 +6,8 @@ namespace CSharpServer.Network
 {
     public sealed class EchoTcpServer : IDisposable
     {
+        private static readonly TimeSpan MaxTimerDelay =
+            TimeSpan.FromMilliseconds(uint.MaxValue - 1);
         private readonly TcpListener listener;
         private readonly int bufferSize;
         private readonly TimeSpan clientIdleTimeout;
@@ -63,7 +65,7 @@ namespace CSharpServer.Network
 
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(inBufferSize);
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxConcurrentClients);
-            if (clientIdleTimeout <= TimeSpan.Zero)
+            if (clientIdleTimeout <= TimeSpan.Zero || clientIdleTimeout > MaxTimerDelay)
             {
                 throw new ArgumentOutOfRangeException(nameof(clientIdleTimeout));
             }

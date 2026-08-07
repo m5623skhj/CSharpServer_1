@@ -154,6 +154,29 @@ namespace UnitTest.Network
         }
 
         [Fact]
+        public async Task ReadUntilEndAsync_ThrowsArgumentOutOfRangeException_WhenIdleTimeoutExceedsTimerLimit()
+        {
+            using var stream = new MemoryStream();
+            var connection = new StreamConnection(stream, inBufferSize: 2, _ => { });
+
+            var exception = await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
+                connection.ReadUntilEndAsync(CancellationToken.None, TimeSpan.MaxValue));
+
+            Assert.Equal("idleTimeout", exception.ParamName);
+        }
+
+        [Fact]
+        public async Task ReadUntilEndAsync_AllowsIdleTimeoutAtTimerLimit()
+        {
+            using var stream = new MemoryStream();
+            var connection = new StreamConnection(stream, inBufferSize: 2, _ => { });
+
+            await connection.ReadUntilEndAsync(
+                CancellationToken.None,
+                TimeSpan.FromMilliseconds(uint.MaxValue - 1));
+        }
+
+        [Fact]
         public void ReadOnce_WritesEchoPacketToStream_WhenEchoHandlerIsUsed()
         {
             var payload = new byte[] { 0x68, 0x65, 0x6C, 0x6C, 0x6F };

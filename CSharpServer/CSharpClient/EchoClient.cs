@@ -8,6 +8,8 @@ public sealed class EchoClient
 {
     private const int ReceiveBufferSize = 4096;
     private static readonly TimeSpan DefaultRequestTimeout = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan MaxTimerDelay =
+        TimeSpan.FromMilliseconds(uint.MaxValue - 1);
 
     public string SendEchoRequest(string host, int port, string message)
     {
@@ -132,7 +134,7 @@ public sealed class EchoClient
 
     private static void ValidateRequestTimeout(TimeSpan requestTimeout)
     {
-        if (requestTimeout <= TimeSpan.Zero)
+        if (requestTimeout <= TimeSpan.Zero || requestTimeout > MaxTimerDelay)
         {
             throw new ArgumentOutOfRangeException(nameof(requestTimeout));
         }

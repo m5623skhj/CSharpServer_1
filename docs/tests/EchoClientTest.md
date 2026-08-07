@@ -40,6 +40,7 @@ Test-only stream that records writes, keeps async reads pending until cancellati
 - The stream overload rejects oversized UTF-8 messages before writing request bytes.
 - The synchronous stream overload throws `TimeoutException` when the request does not complete.
 - `SendEchoRequestAsync` throws `TimeoutException` when the complete request does not finish before the timeout.
+- The async stream overload accepts the .NET timer maximum and rejects larger timeout values before writing.
 - A timed-out stream request closes the stream so it cannot be reused with corrupted protocol state.
 - A stream close failure does not replace the request `TimeoutException`; both underlying failures remain available.
 - The host/port async overload throws `TimeoutException` when a connected server receives the request but does not respond.

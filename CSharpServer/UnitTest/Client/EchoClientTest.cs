@@ -204,6 +204,35 @@ namespace UnitTest.Client
         }
 
         [Fact]
+        public async Task SendEchoRequestAsync_ThrowsArgumentOutOfRangeException_WhenRequestTimeoutExceedsTimerLimit()
+        {
+            using var stream = new ScriptedStream([]);
+            var client = new EchoClient();
+
+            var exception = await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
+                client.SendEchoRequestAsync(stream, "hello", TimeSpan.MaxValue));
+
+            Assert.Equal("requestTimeout", exception.ParamName);
+            Assert.Empty(stream.WrittenData);
+        }
+
+        [Fact]
+        public async Task SendEchoRequestAsync_AllowsRequestTimeoutAtTimerLimit()
+        {
+            var responseMessage = "world";
+            using var stream = new ScriptedStream(
+                PacketEncoder.Encode(Encoding.UTF8.GetBytes(responseMessage)));
+            var client = new EchoClient();
+
+            var response = await client.SendEchoRequestAsync(
+                stream,
+                "hello",
+                TimeSpan.FromMilliseconds(uint.MaxValue - 1));
+
+            Assert.Equal(responseMessage, response);
+        }
+
+        [Fact]
         public void SendEchoRequest_ThrowsTimeoutException_WhenRequestDoesNotCompleteBeforeTimeout()
         {
             using var stream = new WaitingReadStream();

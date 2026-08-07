@@ -33,7 +33,7 @@ Reads from a `Stream` and forwards read bytes to a data handler.
 
 ## Internal Async Read Behavior
 
-The idle-timeout overload uses a linked token only for the pending stream read. After bytes arrive, it invokes the async data handler with the original caller cancellation token so content processing and writes are not classified as client idle time.
+The idle-timeout overload accepts values up to `UInt32.MaxValue - 1` milliseconds and rejects values outside the supported positive range before reading. It uses a linked token only for the pending stream read. After bytes arrive, it invokes the async data handler with the original caller cancellation token so content processing and writes are not classified as client idle time.
 
 ## Constructor Behavior
 
