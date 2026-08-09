@@ -159,7 +159,9 @@ namespace CSharpServer.Network
                         acceptedClient,
                         handlerFailureCancellation.Token);
                     clientTasks.Add(clientTask);
-                    CancelWhenFaulted(clientTask, handlerFailureCancellation);
+                    CancelWhenNotCompletedSuccessfully(
+                        clientTask,
+                        handlerFailureCancellation);
                     acceptedClient = null;
                     slotAcquired = false;
                 }
@@ -237,7 +239,7 @@ namespace CSharpServer.Network
                         acceptedClient,
                         acceptCancellation.Token);
                     clientTasks.Add(clientTask);
-                    CancelWhenFaulted(clientTask, acceptCancellation);
+                    CancelWhenNotCompletedSuccessfully(clientTask, acceptCancellation);
                     acceptedClient = null;
                     slotAcquired = false;
                 }
@@ -403,7 +405,7 @@ namespace CSharpServer.Network
             }
         }
 
-        private static void CancelWhenFaulted(
+        private static void CancelWhenNotCompletedSuccessfully(
             Task clientTask,
             CancellationTokenSource cancellationTokenSource)
         {
@@ -411,7 +413,7 @@ namespace CSharpServer.Network
                 static (_, state) => ((CancellationTokenSource)state!).Cancel(),
                 cancellationTokenSource,
                 CancellationToken.None,
-                TaskContinuationOptions.OnlyOnFaulted
+                TaskContinuationOptions.NotOnRanToCompletion
                     | TaskContinuationOptions.ExecuteSynchronously,
                 TaskScheduler.Default);
         }

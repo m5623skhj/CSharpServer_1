@@ -279,6 +279,35 @@ namespace UnitTest.Network
         }
 
         [Fact]
+        public async Task AcceptAndHandleConcurrently_PropagatesUnexpectedClientHandlerCancellation()
+        {
+            var handlerEntered = new TaskCompletionSource(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+            var handlerCancellation = new CancellationToken(canceled: true);
+            using var server = new EchoTcpServer(
+                IPAddress.Loopback,
+                port: 0,
+                inBufferSize: 2,
+                maxConcurrentClients: 1,
+                clientIdleTimeout: TimeSpan.FromSeconds(5),
+                clientHandler: (_, _) =>
+                {
+                    handlerEntered.TrySetResult();
+                    return Task.FromCanceled(handlerCancellation);
+                });
+            using var cancellationTokenSource = new CancellationTokenSource();
+            using var client = new TcpClient();
+            server.Start();
+            var serverTask = server.AcceptAndHandleConcurrently(cancellationTokenSource.Token);
+
+            await client.ConnectAsync(IPAddress.Loopback, server.Port);
+            await handlerEntered.Task.WaitAsync(TimeSpan.FromSeconds(1));
+
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+                serverTask.WaitAsync(TimeSpan.FromSeconds(1)));
+        }
+
+        [Fact]
         public async Task AcceptAndHandleConcurrently_WithClientCount_PropagatesHandlerFailureBeforeRemainingAccepts()
         {
             using var server = new EchoTcpServer(
@@ -298,6 +327,34 @@ namespace UnitTest.Network
             var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
                 serverTask.WaitAsync(TimeSpan.FromSeconds(1)));
             Assert.Equal("handler failed", exception.Message);
+        }
+
+        [Fact]
+        public async Task AcceptAndHandleConcurrently_WithClientCount_PropagatesHandlerCancellationBeforeRemainingAccepts()
+        {
+            var handlerEntered = new TaskCompletionSource(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+            var handlerCancellation = new CancellationToken(canceled: true);
+            using var server = new EchoTcpServer(
+                IPAddress.Loopback,
+                port: 0,
+                inBufferSize: 2,
+                maxConcurrentClients: 2,
+                clientIdleTimeout: TimeSpan.FromSeconds(5),
+                clientHandler: (_, _) =>
+                {
+                    handlerEntered.TrySetResult();
+                    return Task.FromCanceled(handlerCancellation);
+                });
+            using var client = new TcpClient();
+            server.Start();
+            var serverTask = server.AcceptAndHandleConcurrently(clientCount: 2);
+
+            await client.ConnectAsync(IPAddress.Loopback, server.Port);
+            await handlerEntered.Task.WaitAsync(TimeSpan.FromSeconds(1));
+
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+                serverTask.WaitAsync(TimeSpan.FromSeconds(1)));
         }
 
         [Fact]

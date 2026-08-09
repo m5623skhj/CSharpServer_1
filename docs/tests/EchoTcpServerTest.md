@@ -34,6 +34,7 @@ Verifies `EchoTcpServer` and `EchoClient` integration over loopback TCP.
 - Verifies that an idle client is closed after its configured timeout.
 - Verifies that an unexpected client handler fault stops accept processing and propagates immediately.
 - Verifies that fixed-count mode propagates a handler fault without waiting for the remaining clients to connect.
+- Verifies that unexpected handler cancellation stops both open-ended and fixed-count accept processing and propagates immediately.
 - Verifies that a malformed client packet does not prevent later clients from receiving echo responses.
 - Verifies that out-of-range ports, null IP address, zero or negative buffer size and connection limit, and unsupported idle timeouts are rejected by the server constructor.
 - Verifies that the server constructor accepts an idle timeout exactly at the .NET timer limit and rejects larger values.

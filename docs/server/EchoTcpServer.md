@@ -67,7 +67,9 @@ Listener startup is serialized with disposal so a concurrent `Start` cannot reop
 - Acquires a connection slot before accepting each client.
 - Handles accepted clients with asynchronous stream reads up to the configured limit.
 - Cancels remaining accepts and closes peer clients when a handler faults.
+- Cancels remaining accepts when a handler ends in an unexpected canceled state.
 - Propagates a handler fault without waiting for the remaining client count to connect.
+- Propagates unexpected handler cancellation without waiting for the remaining client count to connect.
 - Waits for all client handler tasks to complete.
 
 ### `AcceptAndHandleConcurrently(CancellationToken cancellationToken)`
@@ -89,7 +91,8 @@ Listener startup is serialized with disposal so a concurrent `Start` cannot reop
 - Slot waiters are counted internally so concurrency tests can prove that a second client is actually queued.
 - Completed successful client handler tasks are pruned while the open-ended accept loop is running.
 - A faulted handler cancels the accept wait immediately, closes peer handlers, and propagates its original exception.
-- Fixed-count and open-ended modes share the same fault cancellation behavior.
+- A handler that ends canceled also stops the accept wait so the server cannot remain blocked waiting for another client.
+- Fixed-count and open-ended modes share the same unsuccessful-handler cancellation behavior.
 - Unexpected accept failures cancel and close active handlers before the original accept exception is propagated.
 - Concurrent handlers await `StreamConnection.ReadUntilEndAsync` without wrapping synchronous reads in `Task.Run`.
 - Concurrent echo responses use cancellation-aware asynchronous writes.
