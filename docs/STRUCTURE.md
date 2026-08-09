@@ -91,8 +91,8 @@ The network layer adapts byte streams and TCP connections into packet sessions.
 - `EchoTcpServer` validates its bind port as `0..65535`, preserving port `0` for OS-assigned test and runtime binding.
 - `EchoTcpServer` can run either for a fixed client count or as a cancellable concurrent accept loop.
 - A semaphore bounds active client handlers, and slots are released on completion, failure, or cancellation.
-- Faulted handlers cancel the accept loop immediately and propagate their original exception.
-- Fixed-count mode also cancels remaining accepts instead of waiting for the configured count after a handler fault.
+- Faulted or unexpectedly canceled handlers stop the accept loop immediately and propagate their completion error.
+- Fixed-count mode also stops remaining accepts instead of waiting for the configured count after a handler fault or unexpected cancellation.
 - `EchoTcpServer` tracks accepted clients at server scope so disposal and accept failures can close every active connection.
 - Disposal cancels both asynchronous accept modes, stops the listener, closes active clients, and disposes cancellation and slot resources.
 - Deferred connection-slot disposal is retried after synchronous handlers complete so shutdown during handling does not skip cleanup.
