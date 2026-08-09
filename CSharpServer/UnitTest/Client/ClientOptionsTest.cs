@@ -117,5 +117,18 @@ namespace UnitTest.Client
             Assert.Contains(ProtocolLimits.MaxPayloadLength.ToString(), error);
             Assert.Contains(ClientOptions.Usage, error);
         }
+
+        [Fact]
+        public void TryParse_ReturnsUsageError_WhenMessageIsNull()
+        {
+            var result = ClientOptions.TryParse(
+                ["localhost", "5000", null!],
+                out var options,
+                out var error);
+
+            Assert.False(result);
+            Assert.Null(options);
+            Assert.Contains(ClientOptions.Usage, error);
+        }
     }
 }

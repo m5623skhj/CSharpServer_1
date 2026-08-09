@@ -57,6 +57,12 @@ public sealed class ClientOptions
         }
 
         var message = args.Length > 2 ? args[2] : DefaultMessage;
+        if (message is null)
+        {
+            error = $"Message cannot be null.{Environment.NewLine}{Usage}";
+            return false;
+        }
+
         if (Encoding.UTF8.GetByteCount(message) > ProtocolLimits.MaxPayloadLength)
         {
             error = $"Message cannot exceed {ProtocolLimits.MaxPayloadLength} UTF-8 bytes."

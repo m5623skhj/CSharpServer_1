@@ -30,6 +30,7 @@ Contain the validated connection target, echo message, and total request timeout
 - Defaults to host `127.0.0.1`, port `5000`, message `hello`, and a five-second request timeout.
 - Rejects empty or whitespace-only hosts before connection startup.
 - Accepts ports from `1` through `65535`.
+- Rejects a null message element as a usage error without throwing.
 - Rejects messages larger than `ProtocolLimits.MaxPayloadLength` when encoded as UTF-8.
 - Requires a positive integer request timeout in milliseconds.
 - Rejects invalid values and extra arguments without throwing parsing exceptions.
