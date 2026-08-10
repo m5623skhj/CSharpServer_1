@@ -95,6 +95,21 @@ public sealed class EchoClient
                 message,
                 cancellationTokenSource.Token).ConfigureAwait(false);
         }
+        catch (InvalidDataException exception)
+        {
+            try
+            {
+                stream.Close();
+            }
+            catch (Exception closeException)
+            {
+                throw new InvalidDataException(
+                    exception.Message,
+                    new AggregateException(exception, closeException));
+            }
+
+            throw;
+        }
         catch (OperationCanceledException exception)
             when (cancellationTokenSource.IsCancellationRequested)
         {

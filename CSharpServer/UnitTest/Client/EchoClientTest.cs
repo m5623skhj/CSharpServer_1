@@ -23,6 +23,7 @@ namespace UnitTest.Client
             Assert.Equal(
                 PacketEncoder.Encode(Encoding.UTF8.GetBytes(requestMessage)),
                 stream.WrittenData);
+            Assert.False(stream.IsDisposed);
         }
 
         [Fact]
@@ -79,6 +80,26 @@ namespace UnitTest.Client
             Assert.Equal(
                 PacketEncoder.Encode(Encoding.UTF8.GetBytes("hello")),
                 stream.WrittenData);
+            Assert.True(stream.IsDisposed);
+        }
+
+        [Fact]
+        public void SendEchoRequest_PreservesInvalidDataException_WhenStreamCloseThrows()
+        {
+            var responseHeader = new byte[sizeof(int)];
+            BinaryPrimitives.WriteInt32LittleEndian(responseHeader, -1);
+            var stream = new ScriptedStream(responseHeader, throwOnDispose: true);
+            var client = new EchoClient();
+
+            var exception = Assert.Throws<InvalidDataException>(() =>
+                client.SendEchoRequest(stream, "hello"));
+
+            var innerException = Assert.IsType<AggregateException>(exception.InnerException);
+            Assert.Collection(
+                innerException.InnerExceptions,
+                item => Assert.IsType<InvalidDataException>(item),
+                item => Assert.IsType<IOException>(item));
+            Assert.True(stream.IsDisposed);
         }
 
         [Fact]
@@ -308,13 +329,16 @@ namespace UnitTest.Client
         {
             private readonly MemoryStream readStream;
             private readonly MemoryStream writeStream = new();
+            private readonly bool throwOnDispose;
 
-            public ScriptedStream(byte[] readData)
+            public ScriptedStream(byte[] readData, bool throwOnDispose = false)
             {
                 readStream = new MemoryStream(readData);
+                this.throwOnDispose = throwOnDispose;
             }
 
             public byte[] WrittenData => writeStream.ToArray();
+            public bool IsDisposed { get; private set; }
 
             public override bool CanRead => true;
             public override bool CanSeek => false;
@@ -355,11 +379,16 @@ namespace UnitTest.Client
             {
                 if (disposing)
                 {
+                    IsDisposed = true;
                     readStream.Dispose();
                     writeStream.Dispose();
                 }
 
                 base.Dispose(disposing);
+                if (disposing && throwOnDispose)
+                {
+                    throw new IOException("close failed");
+                }
             }
         }
 
