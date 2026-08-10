@@ -105,7 +105,18 @@ namespace CSharpServer.Network
         public void AcceptAndHandleOnce()
         {
             ThrowIfDisposed();
-            var client = listener.AcceptTcpClient();
+            TcpClient client;
+            try
+            {
+                client = listener.AcceptTcpClient();
+            }
+            catch (Exception exception)
+                when (IsDisposing()
+                    && IsListenerShutdownException(exception))
+            {
+                throw new ObjectDisposedException(nameof(EchoTcpServer));
+            }
+
             if (!TryTrackClient(client))
             {
                 client.Dispose();

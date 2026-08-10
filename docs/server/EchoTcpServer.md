@@ -53,6 +53,7 @@ Listener startup is serialized with disposal so a concurrent `Start` cannot reop
 - Gets its stream.
 - Creates an echo `StreamConnection`.
 - Reads until the client closes the stream.
+- Throws `ObjectDisposedException` when disposal interrupts a blocked accept instead of exposing a listener shutdown socket error.
 
 ### `AcceptAndHandle(int clientCount)`
 
@@ -103,6 +104,7 @@ Listener startup is serialized with disposal so a concurrent `Start` cannot reop
 ### `Dispose()`
 
 - Cancels fixed-count and open-ended asynchronous accept loops.
+- Interrupts blocked synchronous accepts with `ObjectDisposedException`.
 - Stops the listener and closes all accepted active clients.
 - Disposes cancellation and connection-slot resources.
 - Allows active handler tasks to complete during shutdown without surfacing slot-release disposal races.

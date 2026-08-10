@@ -665,5 +665,32 @@ namespace UnitTest.Network
                 server.Dispose();
             }
         }
+
+        [Fact]
+        public async Task Dispose_InterruptsBlockedAcceptAndHandleOnceWithObjectDisposedException()
+        {
+            var acceptStarting = new TaskCompletionSource(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+            var server = new EchoTcpServer(IPAddress.Loopback, port: 0, inBufferSize: 2);
+            try
+            {
+                server.Start();
+                var serverTask = Task.Run(() =>
+                {
+                    acceptStarting.TrySetResult();
+                    server.AcceptAndHandleOnce();
+                });
+
+                await acceptStarting.Task.WaitAsync(TimeSpan.FromSeconds(1));
+                server.Dispose();
+
+                await Assert.ThrowsAsync<ObjectDisposedException>(() =>
+                    serverTask.WaitAsync(TimeSpan.FromSeconds(1)));
+            }
+            finally
+            {
+                server.Dispose();
+            }
+        }
     }
 }

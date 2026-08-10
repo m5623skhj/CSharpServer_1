@@ -29,6 +29,7 @@ Verifies `EchoTcpServer` and `EchoClient` integration over loopback TCP.
 - Uses a completed echo round trip instead of an arbitrary delay to prove the client was accepted before cancellation.
 - Verifies that disposal closes active clients and completes the open-ended accept loop.
 - Verifies that disposal cancels remaining accepts and completes the fixed-count accept loop.
+- Verifies that disposal interrupts a blocked synchronous accept with `ObjectDisposedException`.
 - Verifies the configured client semaphore has no available slot while one client is active.
 - Verifies that a second client is actually waiting for a slot before the first client is released.
 - Verifies that an idle client is closed after its configured timeout.
