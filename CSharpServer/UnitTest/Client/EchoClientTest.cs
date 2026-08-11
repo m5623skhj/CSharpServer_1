@@ -62,6 +62,36 @@ namespace UnitTest.Client
             {
                 client.SendEchoRequest(stream, "hello");
             });
+            Assert.True(stream.IsDisposed);
+        }
+
+        [Fact]
+        public void SendEchoRequest_PreservesEndOfStreamException_WhenStreamCloseThrows()
+        {
+            var stream = new ScriptedStream([], throwOnDispose: true);
+            var client = new EchoClient();
+
+            var exception = Assert.Throws<EndOfStreamException>(() =>
+                client.SendEchoRequest(stream, "hello"));
+
+            var innerException = Assert.IsType<AggregateException>(exception.InnerException);
+            Assert.Collection(
+                innerException.InnerExceptions,
+                item => Assert.IsType<EndOfStreamException>(item),
+                item => Assert.IsType<IOException>(item));
+            Assert.True(stream.IsDisposed);
+        }
+
+        [Fact]
+        public void SendEchoRequest_ClosesStream_WhenResponseEndsAfterPartialHeader()
+        {
+            using var stream = new ScriptedStream([0x01, 0x00]);
+            var client = new EchoClient();
+
+            Assert.Throws<EndOfStreamException>(() =>
+                client.SendEchoRequest(stream, "hello"));
+
+            Assert.True(stream.IsDisposed);
         }
 
         [Theory]

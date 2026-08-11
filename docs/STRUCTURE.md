@@ -126,6 +126,7 @@ The client currently exists as a test and manual verification tool.
 - `EchoClient` rejects ports outside `1..65535` before network work begins, matching `ClientOptions`.
 - `EchoClient` rejects oversized UTF-8 messages before network work begins, matching `ClientOptions`.
 - `EchoClient` stream overloads reject oversized UTF-8 messages before payload allocation and stream writes.
+- Incomplete responses that reach EOF close caller-supplied streams because the pending packet boundary cannot be recovered.
 - Invalid response lengths close caller-supplied streams because packet framing can no longer be safely reused.
 - A timeout on a caller-supplied stream closes that stream because the request/response framing can no longer be safely reused.
 - Synchronous client methods reuse the async request path with a default or caller-supplied timeout.

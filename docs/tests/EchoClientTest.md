@@ -38,6 +38,7 @@ Test-only stream that records writes, keeps async reads pending until cancellati
 - The host/port overload rejects invalid ports before opening a connection.
 - The host/port overload rejects oversized UTF-8 messages before opening a connection.
 - The stream overload rejects oversized UTF-8 messages before writing request bytes.
+- Incomplete responses that reach EOF close caller-owned streams, and close failures do not replace `EndOfStreamException`.
 - Invalid response lengths close caller-owned streams, and close failures do not replace the protocol exception.
 - The synchronous stream overload throws `TimeoutException` when the request does not complete.
 - `SendEchoRequestAsync` throws `TimeoutException` when the complete request does not finish before the timeout.

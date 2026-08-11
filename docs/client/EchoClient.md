@@ -74,8 +74,10 @@ Sends a length-prefixed echo request and reads one length-prefixed response.
 - Encodes and writes one echo request packet asynchronously.
 - Reads one response packet asynchronously.
 - Cancels the wait when the timeout expires.
+- Closes the supplied stream when EOF arrives before a complete response packet.
 - Closes the supplied stream when an invalid packet length makes response framing unusable.
 - Closes the supplied stream after timeout because a partial or late response cannot be safely correlated with a later request.
+- Preserves `EndOfStreamException` as the primary failure if closing the supplied stream after an incomplete response also fails.
 - Preserves `InvalidDataException` as the primary failure if closing the supplied stream after a protocol error also fails.
 - Preserves `TimeoutException` as the primary failure if closing the supplied stream also fails, while retaining both underlying exceptions.
 - Returns the response as a UTF-8 string.
@@ -87,6 +89,8 @@ Empty messages are valid and are encoded as header-only packets. Messages whose 
 ## Failure Behavior
 
 Throws `EndOfStreamException` if the stream closes before a complete response packet is received.
+
+Caller-owned streams are closed after an incomplete response reaches EOF. If stream cleanup also fails, the `EndOfStreamException` retains both the incomplete-response and close failures in an inner `AggregateException`.
 
 Throws `InvalidDataException` when a response contains an invalid packet length.
 

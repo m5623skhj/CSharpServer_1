@@ -95,6 +95,21 @@ public sealed class EchoClient
                 message,
                 cancellationTokenSource.Token).ConfigureAwait(false);
         }
+        catch (EndOfStreamException exception)
+        {
+            try
+            {
+                stream.Close();
+            }
+            catch (Exception closeException)
+            {
+                throw new EndOfStreamException(
+                    exception.Message,
+                    new AggregateException(exception, closeException));
+            }
+
+            throw;
+        }
         catch (InvalidDataException exception)
         {
             try
