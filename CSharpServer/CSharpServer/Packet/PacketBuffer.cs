@@ -48,13 +48,14 @@ namespace CSharpServer.Packet
                 throw new InvalidDataException("Payload length exceeds max payload length.");
             }
 
-            if (buffer.Count < HeaderSize + payloadLength)
+            if (payloadLength > buffer.Count - HeaderSize)
             {
                 return false;
             }
 
+            var packetLength = HeaderSize + payloadLength;
             packet = buffer.GetRange(HeaderSize, payloadLength).ToArray();
-            buffer.RemoveRange(0, HeaderSize + payloadLength);
+            buffer.RemoveRange(0, packetLength);
 
             return true;
         }

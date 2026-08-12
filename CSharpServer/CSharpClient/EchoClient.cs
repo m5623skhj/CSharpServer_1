@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using System.Net.Sockets;
 using System.Text;
 using CSharpServer.Packet;
@@ -6,7 +7,6 @@ namespace CSharpClient;
 
 public sealed class EchoClient
 {
-    private const int ReceiveBufferSize = 4096;
     private static readonly TimeSpan DefaultRequestTimeout = TimeSpan.FromSeconds(5);
     private static readonly TimeSpan MaxTimerDelay =
         TimeSpan.FromMilliseconds(uint.MaxValue - 1);
@@ -247,11 +247,38 @@ public sealed class EchoClient
     private static async Task<byte[]> ReadResponsePayloadAsync(Stream stream, CancellationToken cancellationToken)
     {
         var packetBuffer = new PacketBuffer();
-        var receiveBuffer = new byte[ReceiveBufferSize];
+        var responseHeader = new byte[sizeof(int)];
+        await ReadExactlyAsync(stream, responseHeader, cancellationToken)
+            .ConfigureAwait(false);
+        packetBuffer.Append(responseHeader);
 
-        while (true)
+        if (packetBuffer.TryReadPacket(out var emptyPayload) && emptyPayload is not null)
         {
-            var readCount = await stream.ReadAsync(receiveBuffer, cancellationToken)
+            return emptyPayload;
+        }
+
+        var payloadLength = BinaryPrimitives.ReadInt32LittleEndian(responseHeader);
+        var payload = new byte[payloadLength];
+        await ReadExactlyAsync(stream, payload, cancellationToken).ConfigureAwait(false);
+        packetBuffer.Append(payload);
+
+        if (!packetBuffer.TryReadPacket(out var responsePayload) || responsePayload is null)
+        {
+            throw new InvalidOperationException(
+                "Complete echo response packet could not be decoded.");
+        }
+
+        return responsePayload;
+    }
+
+    private static async Task ReadExactlyAsync(
+        Stream stream,
+        Memory<byte> buffer,
+        CancellationToken cancellationToken)
+    {
+        while (!buffer.IsEmpty)
+        {
+            var readCount = await stream.ReadAsync(buffer, cancellationToken)
                 .ConfigureAwait(false);
             if (readCount == 0)
             {
@@ -259,11 +286,7 @@ public sealed class EchoClient
                     "Connection closed before echo response was received.");
             }
 
-            packetBuffer.Append(receiveBuffer.AsSpan(0, readCount));
-            if (packetBuffer.TryReadPacket(out var responsePayload) && responsePayload is not null)
-            {
-                return responsePayload;
-            }
+            buffer = buffer[readCount..];
         }
     }
 }

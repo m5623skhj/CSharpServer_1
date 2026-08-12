@@ -16,7 +16,7 @@ Verifies client request encoding and response decoding.
 
 ### `ScriptedStream`
 
-Test-only stream that supplies scripted read bytes and records written bytes.
+Test-only stream that supplies scripted read bytes, exposes the unread byte count, and records written bytes.
 
 ### `WaitingReadStream`
 
@@ -26,9 +26,12 @@ Test-only stream that records writes, keeps async reads pending until cancellati
 
 - `SendEchoRequest` writes an encoded request packet.
 - `SendEchoRequest` decodes one encoded response packet.
+- `SendEchoRequest` does not consume a second response that shares the underlying stream read buffer.
 - The stream overload supports an empty message and header-only response packet.
 - The stream overload accepts a UTF-8 message exactly at `ProtocolLimits.MaxPayloadLength`.
 - `SendEchoRequest` throws `EndOfStreamException` when the stream closes before a response is received.
+- Header or payload EOF closes the caller-owned stream when a complete response cannot be read.
+- Responses split into one-byte reads are reassembled successfully.
 - `SendEchoRequest` throws `InvalidDataException` when a response declares a negative payload length.
 - `SendEchoRequest` throws `InvalidDataException` when a response declares a payload length above `ProtocolLimits.MaxPayloadLength`.
 - `SendEchoRequest` throws `InvalidDataException` and closes the caller-owned stream when a complete response payload is not valid UTF-8.

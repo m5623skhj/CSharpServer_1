@@ -79,7 +79,8 @@ Sends a length-prefixed echo request and reads one length-prefixed response.
 - Rejects messages larger than `ProtocolLimits.MaxPayloadLength` when encoded as UTF-8 before allocating the payload.
 - Rejects strings that cannot be encoded as valid UTF-8 before writing request bytes.
 - Encodes and writes one echo request packet asynchronously.
-- Reads one response packet asynchronously.
+- Reads exactly one response header and its declared payload asynchronously.
+- Leaves bytes belonging to a later response unread on a caller-owned stream.
 - Cancels the wait when the timeout expires.
 - Closes the supplied stream when EOF arrives before a complete response packet.
 - Closes the supplied stream when an invalid packet length makes response framing unusable.
@@ -118,3 +119,5 @@ If caller-owned stream cleanup also fails after timeout, the `TimeoutException` 
 Caller-owned streams must be treated as unusable after a request timeout. The client closes them to enforce this protocol boundary.
 
 Async internals avoid synchronization-context capture so synchronous wrappers do not deadlock UI or test contexts.
+
+Successful caller-owned stream requests consume only their own response frame, allowing later frames to remain available for subsequent operations.

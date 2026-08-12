@@ -138,5 +138,21 @@ namespace UnitTest.Packet
                 buffer.TryReadPacket(out _);
             });
         }
+
+        [Fact]
+        public void TryReadPacket_ReturnsFalse_WhenIncompletePayloadLengthWouldOverflowPacketLength()
+        {
+            var header = new byte[sizeof(int)];
+            System.Buffers.Binary.BinaryPrimitives.WriteInt32LittleEndian(
+                header,
+                int.MaxValue);
+            var buffer = new PacketBuffer(maxPayloadLength: int.MaxValue);
+            buffer.Append(header);
+
+            var result = buffer.TryReadPacket(out var packet);
+
+            Assert.False(result);
+            Assert.Null(packet);
+        }
     }
 }

@@ -25,3 +25,4 @@ Verifies `PacketBuffer` behavior for complete, incomplete, and malformed packets
 - Remaining data can complete a previously incomplete packet.
 - Negative payload length throws `InvalidDataException`.
 - Payload length exceeding the configured maximum throws `InvalidDataException`.
+- An incomplete `Int32.MaxValue` payload returns `false` without overflowing the total packet length calculation.

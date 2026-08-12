@@ -37,6 +37,7 @@ Copies received bytes directly into list storage without creating a sliced inter
 ### `TryReadPacket(out byte[]? packet)`
 
 - Returns `false` when the header or payload is incomplete.
+- Compares incomplete payload lengths without overflowing when a custom maximum approaches `Int32.MaxValue`.
 - Returns `true` and outputs one payload when a complete packet is available.
 - Removes the consumed packet from the internal buffer.
 - Throws `InvalidDataException` for negative or oversized payload lengths.

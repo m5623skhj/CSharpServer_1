@@ -27,6 +27,26 @@ namespace UnitTest.Client
         }
 
         [Fact]
+        public void SendEchoRequest_DoesNotConsumeNextResponse_WhenResponsesShareReadBuffer()
+        {
+            var firstResponse = PacketEncoder.Encode(Encoding.UTF8.GetBytes("first"));
+            var secondResponse = PacketEncoder.Encode(Encoding.UTF8.GetBytes("second"));
+            using var stream = new ScriptedStream(firstResponse.Concat(secondResponse).ToArray());
+            var client = new EchoClient();
+
+            var firstResult = client.SendEchoRequest(stream, "first request");
+
+            Assert.Equal("first", firstResult);
+            Assert.Equal(secondResponse.Length, stream.RemainingReadByteCount);
+
+            var secondResult = client.SendEchoRequest(stream, "second request");
+
+            Assert.Equal("second", secondResult);
+            Assert.Equal(0, stream.RemainingReadByteCount);
+            Assert.False(stream.IsDisposed);
+        }
+
+        [Fact]
         public void SendEchoRequest_WithStream_AllowsEmptyMessage()
         {
             using var stream = new ScriptedStream(PacketEncoder.Encode([]));
@@ -92,6 +112,35 @@ namespace UnitTest.Client
                 client.SendEchoRequest(stream, "hello"));
 
             Assert.True(stream.IsDisposed);
+        }
+
+        [Fact]
+        public void SendEchoRequest_ClosesStream_WhenResponseEndsAfterPartialPayload()
+        {
+            using var stream = new ScriptedStream([
+                0x05, 0x00, 0x00, 0x00,
+                0x68, 0x65
+            ]);
+            var client = new EchoClient();
+
+            Assert.Throws<EndOfStreamException>(() =>
+                client.SendEchoRequest(stream, "hello"));
+
+            Assert.True(stream.IsDisposed);
+        }
+
+        [Fact]
+        public void SendEchoRequest_ReturnsResponse_WhenResponseIsSplitAcrossReads()
+        {
+            var encodedResponse = PacketEncoder.Encode(Encoding.UTF8.GetBytes("world"));
+            using var stream = new ScriptedStream(encodedResponse, maxReadSize: 1);
+            var client = new EchoClient();
+
+            var response = client.SendEchoRequest(stream, "hello");
+
+            Assert.Equal("world", response);
+            Assert.Equal(0, stream.RemainingReadByteCount);
+            Assert.False(stream.IsDisposed);
         }
 
         [Fact]
@@ -444,20 +493,24 @@ namespace UnitTest.Client
             private readonly bool throwOnDispose;
             private readonly IOException? readException;
             private readonly IOException? writeException;
+            private readonly int? maxReadSize;
 
             public ScriptedStream(
                 byte[] readData,
                 bool throwOnDispose = false,
                 IOException? readException = null,
-                IOException? writeException = null)
+                IOException? writeException = null,
+                int? maxReadSize = null)
             {
                 readStream = new MemoryStream(readData);
                 this.throwOnDispose = throwOnDispose;
                 this.readException = readException;
                 this.writeException = writeException;
+                this.maxReadSize = maxReadSize;
             }
 
             public byte[] WrittenData => writeStream.ToArray();
+            public long RemainingReadByteCount => readStream.Length - readStream.Position;
             public bool IsDisposed { get; private set; }
 
             public override bool CanRead => true;
@@ -482,7 +535,10 @@ namespace UnitTest.Client
                     throw readException;
                 }
 
-                return readStream.Read(buffer, offset, count);
+                return readStream.Read(
+                    buffer,
+                    offset,
+                    Math.Min(count, maxReadSize ?? count));
             }
 
             public override long Seek(long offset, SeekOrigin origin)

@@ -129,6 +129,7 @@ The client currently exists as a test and manual verification tool.
 - `EchoClient` rejects request strings that cannot be encoded as valid UTF-8 before network work begins, matching `ClientOptions`.
 - `EchoClient` stream overloads reject oversized UTF-8 messages before payload allocation and stream writes.
 - `EchoClient` strictly validates response UTF-8 and reports invalid text payloads as protocol errors.
+- `EchoClient` reads exactly one response frame so later bytes remain available on caller-owned streams.
 - Incomplete responses that reach EOF close caller-supplied streams because the pending packet boundary cannot be recovered.
 - Invalid response lengths close caller-supplied streams because packet framing can no longer be safely reused.
 - Request or response I/O failures close caller-supplied streams because partial packet state may remain.
