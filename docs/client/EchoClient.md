@@ -76,9 +76,11 @@ Sends a length-prefixed echo request and reads one length-prefixed response.
 - Cancels the wait when the timeout expires.
 - Closes the supplied stream when EOF arrives before a complete response packet.
 - Closes the supplied stream when an invalid packet length makes response framing unusable.
+- Closes the supplied stream when request or response I/O fails after the operation begins.
 - Closes the supplied stream after timeout because a partial or late response cannot be safely correlated with a later request.
 - Preserves `EndOfStreamException` as the primary failure if closing the supplied stream after an incomplete response also fails.
 - Preserves `InvalidDataException` as the primary failure if closing the supplied stream after a protocol error also fails.
+- Preserves `IOException` as the primary failure if closing the supplied stream after an I/O error also fails.
 - Preserves `TimeoutException` as the primary failure if closing the supplied stream also fails, while retaining both underlying exceptions.
 - Returns the response as a UTF-8 string.
 
@@ -95,6 +97,8 @@ Caller-owned streams are closed after an incomplete response reaches EOF. If str
 Throws `InvalidDataException` when a response contains an invalid packet length.
 
 Caller-owned streams are closed after an invalid response length because the packet boundary cannot be recovered safely. If stream cleanup also fails, the `InvalidDataException` retains both the protocol and close failures in an inner `AggregateException`.
+
+Caller-owned streams are also closed after other request or response `IOException` failures because a partial frame may remain. If cleanup fails, the `IOException` retains both I/O failures in an inner `AggregateException`.
 
 The TimeSpan overloads throw `TimeoutException` if the complete request does not finish before the configured timeout.
 

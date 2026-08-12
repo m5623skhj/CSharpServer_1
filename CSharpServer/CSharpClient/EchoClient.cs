@@ -125,6 +125,21 @@ public sealed class EchoClient
 
             throw;
         }
+        catch (IOException exception)
+        {
+            try
+            {
+                stream.Close();
+            }
+            catch (Exception closeException)
+            {
+                throw new IOException(
+                    exception.Message,
+                    new AggregateException(exception, closeException));
+            }
+
+            throw;
+        }
         catch (OperationCanceledException exception)
             when (cancellationTokenSource.IsCancellationRequested)
         {

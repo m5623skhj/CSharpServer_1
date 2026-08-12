@@ -40,6 +40,7 @@ Test-only stream that records writes, keeps async reads pending until cancellati
 - The stream overload rejects oversized UTF-8 messages before writing request bytes.
 - Incomplete responses that reach EOF close caller-owned streams, and close failures do not replace `EndOfStreamException`.
 - Invalid response lengths close caller-owned streams, and close failures do not replace the protocol exception.
+- Request and response I/O failures close caller-owned streams, and close failures do not replace the original `IOException`.
 - The synchronous stream overload throws `TimeoutException` when the request does not complete.
 - `SendEchoRequestAsync` throws `TimeoutException` when the complete request does not finish before the timeout.
 - The async stream overload accepts the .NET timer maximum and rejects larger timeout values before writing.

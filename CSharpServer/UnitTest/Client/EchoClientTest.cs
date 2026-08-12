@@ -94,6 +94,60 @@ namespace UnitTest.Client
             Assert.True(stream.IsDisposed);
         }
 
+        [Fact]
+        public void SendEchoRequest_ClosesStream_WhenResponseReadThrowsIOException()
+        {
+            var expectedException = new IOException("read failed");
+            using var stream = new ScriptedStream(
+                [],
+                readException: expectedException);
+            var client = new EchoClient();
+
+            var exception = Assert.Throws<IOException>(() =>
+                client.SendEchoRequest(stream, "hello"));
+
+            Assert.Same(expectedException, exception);
+            Assert.True(stream.IsDisposed);
+        }
+
+        [Fact]
+        public void SendEchoRequest_PreservesIOException_WhenStreamCloseThrows()
+        {
+            var expectedException = new IOException("read failed");
+            var stream = new ScriptedStream(
+                [],
+                throwOnDispose: true,
+                readException: expectedException);
+            var client = new EchoClient();
+
+            var exception = Assert.Throws<IOException>(() =>
+                client.SendEchoRequest(stream, "hello"));
+
+            var innerException = Assert.IsType<AggregateException>(exception.InnerException);
+            Assert.Collection(
+                innerException.InnerExceptions,
+                item => Assert.Same(expectedException, item),
+                item => Assert.IsType<IOException>(item));
+            Assert.True(stream.IsDisposed);
+        }
+
+        [Fact]
+        public void SendEchoRequest_ClosesStream_WhenRequestWriteThrowsIOException()
+        {
+            var expectedException = new IOException("write failed");
+            using var stream = new ScriptedStream(
+                [],
+                writeException: expectedException);
+            var client = new EchoClient();
+
+            var exception = Assert.Throws<IOException>(() =>
+                client.SendEchoRequest(stream, "hello"));
+
+            Assert.Same(expectedException, exception);
+            Assert.Empty(stream.WrittenData);
+            Assert.True(stream.IsDisposed);
+        }
+
         [Theory]
         [InlineData(-1)]
         [InlineData(ProtocolLimits.MaxPayloadLength + 1)]
@@ -360,11 +414,19 @@ namespace UnitTest.Client
             private readonly MemoryStream readStream;
             private readonly MemoryStream writeStream = new();
             private readonly bool throwOnDispose;
+            private readonly IOException? readException;
+            private readonly IOException? writeException;
 
-            public ScriptedStream(byte[] readData, bool throwOnDispose = false)
+            public ScriptedStream(
+                byte[] readData,
+                bool throwOnDispose = false,
+                IOException? readException = null,
+                IOException? writeException = null)
             {
                 readStream = new MemoryStream(readData);
                 this.throwOnDispose = throwOnDispose;
+                this.readException = readException;
+                this.writeException = writeException;
             }
 
             public byte[] WrittenData => writeStream.ToArray();
@@ -387,6 +449,11 @@ namespace UnitTest.Client
 
             public override int Read(byte[] buffer, int offset, int count)
             {
+                if (readException is not null)
+                {
+                    throw readException;
+                }
+
                 return readStream.Read(buffer, offset, count);
             }
 
@@ -402,6 +469,11 @@ namespace UnitTest.Client
 
             public override void Write(byte[] buffer, int offset, int count)
             {
+                if (writeException is not null)
+                {
+                    throw writeException;
+                }
+
                 writeStream.Write(buffer, offset, count);
             }
 
