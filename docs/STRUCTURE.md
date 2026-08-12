@@ -118,6 +118,7 @@ The client currently exists as a test and manual verification tool.
 
 - `ClientOptions` rejects empty hosts, validates command-line values, and applies a total request timeout without throwing parsing exceptions.
 - `ClientOptions` rejects null argument arrays before reading parser state.
+- `ClientOptions` rejects message strings that cannot be encoded as valid UTF-8 without throwing parsing exceptions.
 - Client `Program` prints validation errors, sends a request, and converts expected network or protocol failures into exit code `1`.
 - `EchoClient` connects to a TCP server, sends an encoded echo request, waits for one encoded response, and decodes it.
 - `EchoClient` applies timeout or caller cancellation across TCP connect, request write, and response read.
@@ -125,6 +126,7 @@ The client currently exists as a test and manual verification tool.
 - `EchoClient` rejects empty or whitespace-only hosts before network work begins, matching `ClientOptions`.
 - `EchoClient` rejects ports outside `1..65535` before network work begins, matching `ClientOptions`.
 - `EchoClient` rejects oversized UTF-8 messages before network work begins, matching `ClientOptions`.
+- `EchoClient` rejects request strings that cannot be encoded as valid UTF-8 before network work begins, matching `ClientOptions`.
 - `EchoClient` stream overloads reject oversized UTF-8 messages before payload allocation and stream writes.
 - `EchoClient` strictly validates response UTF-8 and reports invalid text payloads as protocol errors.
 - Incomplete responses that reach EOF close caller-supplied streams because the pending packet boundary cannot be recovered.

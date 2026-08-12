@@ -39,6 +39,7 @@ Test-only stream that records writes, keeps async reads pending until cancellati
 - The host/port overload rejects invalid ports before opening a connection.
 - The host/port overload rejects oversized UTF-8 messages before opening a connection.
 - The stream overload rejects oversized UTF-8 messages before writing request bytes.
+- The stream overload rejects request strings that cannot be encoded as valid UTF-8 before writing request bytes.
 - Incomplete responses that reach EOF close caller-owned streams, and close failures do not replace `EndOfStreamException`.
 - Invalid response lengths close caller-owned streams, and close failures do not replace the protocol exception.
 - Request and response I/O failures close caller-owned streams, and close failures do not replace the original `IOException`.

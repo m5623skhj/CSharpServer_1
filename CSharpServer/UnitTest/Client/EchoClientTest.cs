@@ -288,6 +288,21 @@ namespace UnitTest.Client
         }
 
         [Fact]
+        public void SendEchoRequest_WithStream_ThrowsArgumentException_WhenMessageIsNotValidUtf16()
+        {
+            using var stream = new ScriptedStream(PacketEncoder.Encode([]));
+            var client = new EchoClient();
+
+            var exception = Assert.Throws<ArgumentException>(() =>
+                client.SendEchoRequest(stream, "\uD800"));
+
+            Assert.Equal("message", exception.ParamName);
+            Assert.IsType<EncoderFallbackException>(exception.InnerException);
+            Assert.Empty(stream.WrittenData);
+            Assert.False(stream.IsDisposed);
+        }
+
+        [Fact]
         public async Task SendEchoRequestAsync_ThrowsTimeoutException_WhenRequestDoesNotCompleteBeforeTimeout()
         {
             using var stream = new WaitingReadStream();

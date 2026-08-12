@@ -169,7 +169,7 @@ public sealed class EchoClient
         ArgumentNullException.ThrowIfNull(message);
         ValidateMessageSize(message);
 
-        var payload = Encoding.UTF8.GetBytes(message);
+        var payload = StrictUtf8.GetBytes(message);
         var packet = PacketEncoder.Encode(payload);
 
         await stream.WriteAsync(packet, cancellationToken).ConfigureAwait(false);
@@ -216,7 +216,20 @@ public sealed class EchoClient
 
     private static void ValidateMessageSize(string message)
     {
-        if (Encoding.UTF8.GetByteCount(message) <= ProtocolLimits.MaxPayloadLength)
+        int messageByteCount;
+        try
+        {
+            messageByteCount = StrictUtf8.GetByteCount(message);
+        }
+        catch (EncoderFallbackException exception)
+        {
+            throw new ArgumentException(
+                "Message must be valid UTF-8 text.",
+                nameof(message),
+                exception);
+        }
+
+        if (messageByteCount <= ProtocolLimits.MaxPayloadLength)
         {
             return;
         }

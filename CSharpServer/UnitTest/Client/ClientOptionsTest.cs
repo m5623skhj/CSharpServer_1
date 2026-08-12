@@ -130,5 +130,19 @@ namespace UnitTest.Client
             Assert.Null(options);
             Assert.Contains(ClientOptions.Usage, error);
         }
+
+        [Fact]
+        public void TryParse_ReturnsUsageError_WhenMessageIsNotValidUtf16()
+        {
+            var result = ClientOptions.TryParse(
+                ["localhost", "5000", "\uD800"],
+                out var options,
+                out var error);
+
+            Assert.False(result);
+            Assert.Null(options);
+            Assert.Contains("valid UTF-8", error);
+            Assert.Contains(ClientOptions.Usage, error);
+        }
     }
 }

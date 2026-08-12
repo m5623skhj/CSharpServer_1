@@ -9,6 +9,9 @@ public sealed class ClientOptions
     private const int DefaultPort = 5000;
     private const string DefaultMessage = "hello";
     private const int DefaultRequestTimeoutMilliseconds = 5000;
+    private static readonly UTF8Encoding StrictUtf8 = new(
+        encoderShouldEmitUTF8Identifier: false,
+        throwOnInvalidBytes: true);
 
     private ClientOptions(string host, int port, string message, TimeSpan requestTimeout)
     {
@@ -63,7 +66,18 @@ public sealed class ClientOptions
             return false;
         }
 
-        if (Encoding.UTF8.GetByteCount(message) > ProtocolLimits.MaxPayloadLength)
+        int messageByteCount;
+        try
+        {
+            messageByteCount = StrictUtf8.GetByteCount(message);
+        }
+        catch (EncoderFallbackException)
+        {
+            error = $"Message must be valid UTF-8 text.{Environment.NewLine}{Usage}";
+            return false;
+        }
+
+        if (messageByteCount > ProtocolLimits.MaxPayloadLength)
         {
             error = $"Message cannot exceed {ProtocolLimits.MaxPayloadLength} UTF-8 bytes."
                 + $"{Environment.NewLine}{Usage}";

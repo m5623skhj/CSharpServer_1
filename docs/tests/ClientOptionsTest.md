@@ -23,5 +23,6 @@ Verifies client option defaults, explicit values, and usage-oriented validation 
 - Non-numeric and out-of-range ports are rejected with usage text.
 - Non-numeric and non-positive request timeouts are rejected with usage text.
 - A null message element is rejected with usage text instead of a parsing exception.
+- A message string that cannot be encoded as valid UTF-8 is rejected with usage text instead of being silently replaced.
 - Messages whose UTF-8 byte length exceeds the shared payload limit are rejected with usage text.
 - Extra arguments are rejected with usage text.
