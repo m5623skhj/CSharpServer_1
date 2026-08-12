@@ -10,6 +10,9 @@ public sealed class EchoClient
     private static readonly TimeSpan DefaultRequestTimeout = TimeSpan.FromSeconds(5);
     private static readonly TimeSpan MaxTimerDelay =
         TimeSpan.FromMilliseconds(uint.MaxValue - 1);
+    private static readonly UTF8Encoding StrictUtf8 = new(
+        encoderShouldEmitUTF8Identifier: false,
+        throwOnInvalidBytes: true);
 
     public string SendEchoRequest(string host, int port, string message)
     {
@@ -174,7 +177,16 @@ public sealed class EchoClient
         var responsePayload = await ReadResponsePayloadAsync(stream, cancellationToken)
             .ConfigureAwait(false);
 
-        return Encoding.UTF8.GetString(responsePayload);
+        try
+        {
+            return StrictUtf8.GetString(responsePayload);
+        }
+        catch (DecoderFallbackException exception)
+        {
+            throw new InvalidDataException(
+                "Echo response payload is not valid UTF-8.",
+                exception);
+        }
     }
 
     private static void ValidateRequestTimeout(TimeSpan requestTimeout)

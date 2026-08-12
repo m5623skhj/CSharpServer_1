@@ -148,6 +148,19 @@ namespace UnitTest.Client
             Assert.True(stream.IsDisposed);
         }
 
+        [Fact]
+        public void SendEchoRequest_ThrowsInvalidDataException_WhenResponseIsNotValidUtf8()
+        {
+            using var stream = new ScriptedStream(PacketEncoder.Encode([0xC3, 0x28]));
+            var client = new EchoClient();
+
+            var exception = Assert.Throws<InvalidDataException>(() =>
+                client.SendEchoRequest(stream, "hello"));
+
+            Assert.IsType<DecoderFallbackException>(exception.InnerException);
+            Assert.True(stream.IsDisposed);
+        }
+
         [Theory]
         [InlineData(-1)]
         [InlineData(ProtocolLimits.MaxPayloadLength + 1)]

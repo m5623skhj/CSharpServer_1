@@ -31,6 +31,7 @@ Test-only stream that records writes, keeps async reads pending until cancellati
 - `SendEchoRequest` throws `EndOfStreamException` when the stream closes before a response is received.
 - `SendEchoRequest` throws `InvalidDataException` when a response declares a negative payload length.
 - `SendEchoRequest` throws `InvalidDataException` when a response declares a payload length above `ProtocolLimits.MaxPayloadLength`.
+- `SendEchoRequest` throws `InvalidDataException` and closes the caller-owned stream when a complete response payload is not valid UTF-8.
 - `SendEchoRequest` rejects a null caller-supplied stream.
 - `SendEchoRequest` rejects a null message before writing a stream request.
 - The host/port overload rejects a null host or message before opening a connection.

@@ -82,7 +82,7 @@ Sends a length-prefixed echo request and reads one length-prefixed response.
 - Preserves `InvalidDataException` as the primary failure if closing the supplied stream after a protocol error also fails.
 - Preserves `IOException` as the primary failure if closing the supplied stream after an I/O error also fails.
 - Preserves `TimeoutException` as the primary failure if closing the supplied stream also fails, while retaining both underlying exceptions.
-- Returns the response as a UTF-8 string.
+- Returns the response as a UTF-8 string and rejects invalid UTF-8 payload bytes as a protocol error.
 
 ## Message Boundaries
 
@@ -96,7 +96,9 @@ Caller-owned streams are closed after an incomplete response reaches EOF. If str
 
 Throws `InvalidDataException` when a response contains an invalid packet length.
 
-Caller-owned streams are closed after an invalid response length because the packet boundary cannot be recovered safely. If stream cleanup also fails, the `InvalidDataException` retains both the protocol and close failures in an inner `AggregateException`.
+Throws `InvalidDataException` when a complete response payload is not valid UTF-8 instead of silently replacing invalid bytes.
+
+Caller-owned streams are closed after an invalid response length or invalid UTF-8 payload because the peer violated the client's response protocol. If stream cleanup also fails, the `InvalidDataException` retains both the protocol and close failures in an inner `AggregateException`.
 
 Caller-owned streams are also closed after other request or response `IOException` failures because a partial frame may remain. If cleanup fails, the `IOException` retains both I/O failures in an inner `AggregateException`.
 
