@@ -26,6 +26,10 @@ Test-only stream that keeps a write active until the test releases it and record
 
 Test-only stream that keeps an async write pending until cancellation.
 
+### `ConcurrentAsyncWriteStream`
+
+Test-only stream that blocks the first asynchronous write and detects overlapping write calls.
+
 ## Test Coverage
 
 - Constructor rejects a null stream.
@@ -34,7 +38,7 @@ Test-only stream that keeps an async write pending until cancellation.
 - `Send` rejects writes after close and returns its send slot after the exception.
 - `SendAsync` propagates cancellation to the stream write.
 - `SendAsync` rejects writes after close and returns its send slot after the exception.
-- Concurrent async sends verify semaphore occupancy, ordered completion, and non-overlapping writes.
+- Concurrent async sends verify semaphore occupancy and non-overlapping writes.
 - `Close` closes the stream.
 - Repeated `Close` calls close the stream only once.
-- `Close` returns without waiting for a blocked send and interrupts that send through stream disposal.
+- `Close` returns without waiting for a blocked send and disposes the stream; after the test releases the blocked write, that send fails against the disposed stream.

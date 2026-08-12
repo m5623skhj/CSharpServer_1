@@ -42,6 +42,6 @@ Repeated close calls have no effect.
 
 ## Notes
 
-Sync and async sends share one semaphore. Close uses a separate state lock so it can interrupt a blocked stream write.
+Sync and async sends share one semaphore. Close uses a separate state lock so it can close the underlying stream without waiting for an active send. Whether stream disposal immediately interrupts a pending write depends on the concrete `Stream` implementation.
 
 The test assembly can inspect the internal available send slot count for deterministic serialization checks.

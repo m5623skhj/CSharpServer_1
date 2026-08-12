@@ -6,6 +6,8 @@
 
 목표는 단순히 어떤 코드를 만들었는지 나열하는 것이 아니라, **왜 그 테스트를 먼저 만들었고, 테스트가 어떤 설계를 유도했으며, 진행 중 어떤 중복과 리팩토링 지점이 드러났는지**를 남기는 것이다.
 
+이 문서는 초기 패킷 처리 과정의 Step 11까지를 기록한다. 현재 프로젝트 구조와 동작은 [`docs/STRUCTURE.md`](docs/STRUCTURE.md) 및 세부 문서를 기준으로 한다.
+
 ## Starting Point
 
 처음 목표는 C#으로 학습용 서버를 만드는 것이었다.
@@ -238,7 +240,7 @@ HeaderSize + payloadLength
 요구사항:
 
 ```text
-payload length가 음수이면 InvalidOperationException을 던진다.
+payload length가 음수이면 InvalidDataException을 던진다.
 ```
 
 여기서 `false`를 반환하지 않기로 했다.
@@ -255,7 +257,7 @@ false는 "아직 데이터가 부족하다"는 뜻이다.
 ```text
 false: 정상 상황이지만 아직 패킷이 완성되지 않음
 true: 패킷 하나를 성공적으로 읽음
-InvalidOperationException: 프로토콜 위반
+InvalidDataException: 프로토콜 위반
 ```
 
 이 과정에서 음수 길이 검사는 payload length를 읽은 직후에 수행하도록 위치를 바로잡았다.
@@ -267,13 +269,13 @@ InvalidOperationException: 프로토콜 위반
 요구사항:
 
 ```text
-payload length가 허용 최대 크기보다 크면 InvalidOperationException을 던진다.
+payload length가 허용 최대 크기보다 크면 InvalidDataException을 던진다.
 ```
 
 이를 위해 `PacketBuffer`는 생성자로 최대 payload 길이를 받을 수 있게 되었다.
 
 ```csharp
-public PacketBuffer(int maxPayloadLength = DefaultMaxPayloadLength)
+public PacketBuffer(int maxPayloadLength = ProtocolLimits.MaxPayloadLength)
 ```
 
 테스트에서는 제한을 작게 설정했다.
@@ -374,13 +376,13 @@ PacketBufferTest는 PacketBuffer의 책임을 검증해야 한다.
 PacketEncoder의 인코딩 규칙은 PacketEncoderTest에서 검증하는 것이 맞다.
 ```
 
-따라서 `PacketBufferTest`에 남아 있는 encoder 테스트는 제거하는 것이 좋다.
+따라서 encoder 테스트를 `PacketEncoderTest`로 분리하고 `PacketBufferTest`에서는 제거했다.
 
 이건 기능 변경이 아니라 테스트 책임 분리다.
 
-## Current State
+## State After Step 11
 
-현재까지 만들어진 핵심 요소는 다음과 같다.
+Step 11 시점까지 만들어진 핵심 요소는 다음과 같았다.
 
 ```text
 PacketBuffer
@@ -410,9 +412,9 @@ PacketEncoder
 7. 테스트에도 책임 분리와 중복 제거가 필요하다.
 ```
 
-## Next Recommended Step
+## Recommended Step After Step 11
 
-다음으로는 `PacketEncoder`와 `PacketBuffer`가 같은 wire format을 사용하는지 확인하는 작은 통합 테스트를 추가하는 것이 좋다.
+당시 다음 단계로는 `PacketEncoder`와 `PacketBuffer`가 같은 wire format을 사용하는지 확인하는 작은 통합 테스트를 권장했다.
 
 예상 테스트:
 
@@ -433,3 +435,4 @@ Session은 수신된 byte[]를 PacketBuffer에 넣고,
 
 이렇게 하면 네트워크 없이도 수신 처리 흐름을 테스트할 수 있다.
 
+이 단계들은 현재 `PacketCodecTest`와 `Session` 구현 및 테스트로 완료되었다. 이후 추가된 네트워크, 서버, 클라이언트 계층은 [`docs/STRUCTURE.md`](docs/STRUCTURE.md)에서 확인할 수 있다.
