@@ -27,6 +27,24 @@ namespace UnitTest.Client
         }
 
         [Fact]
+        public async Task SendEchoRequestAsync_FlushesRequestBeforeReadingResponse()
+        {
+            var encodedResponse = PacketEncoder.Encode(Encoding.UTF8.GetBytes("world"));
+            using var stream = new ScriptedStream(
+                encodedResponse,
+                requireFlushBeforeRead: true);
+            var client = new EchoClient();
+
+            var response = await client.SendEchoRequestAsync(
+                stream,
+                "hello",
+                TimeSpan.FromSeconds(1));
+
+            Assert.Equal("world", response);
+            Assert.Equal(1, stream.FlushCount);
+        }
+
+        [Fact]
         public void SendEchoRequest_DoesNotConsumeNextResponse_WhenResponsesShareReadBuffer()
         {
             var firstResponse = PacketEncoder.Encode(Encoding.UTF8.GetBytes("first"));
@@ -494,24 +512,29 @@ namespace UnitTest.Client
             private readonly IOException? readException;
             private readonly IOException? writeException;
             private readonly int? maxReadSize;
+            private readonly bool requireFlushBeforeRead;
+            private bool hasUnflushedWrite;
 
             public ScriptedStream(
                 byte[] readData,
                 bool throwOnDispose = false,
                 IOException? readException = null,
                 IOException? writeException = null,
-                int? maxReadSize = null)
+                int? maxReadSize = null,
+                bool requireFlushBeforeRead = false)
             {
                 readStream = new MemoryStream(readData);
                 this.throwOnDispose = throwOnDispose;
                 this.readException = readException;
                 this.writeException = writeException;
                 this.maxReadSize = maxReadSize;
+                this.requireFlushBeforeRead = requireFlushBeforeRead;
             }
 
             public byte[] WrittenData => writeStream.ToArray();
             public long RemainingReadByteCount => readStream.Length - readStream.Position;
             public bool IsDisposed { get; private set; }
+            public int FlushCount { get; private set; }
 
             public override bool CanRead => true;
             public override bool CanSeek => false;
@@ -526,6 +549,14 @@ namespace UnitTest.Client
 
             public override void Flush()
             {
+                RecordFlush();
+            }
+
+            public override Task FlushAsync(CancellationToken cancellationToken)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                RecordFlush();
+                return Task.CompletedTask;
             }
 
             public override int Read(byte[] buffer, int offset, int count)
@@ -533,6 +564,12 @@ namespace UnitTest.Client
                 if (readException is not null)
                 {
                     throw readException;
+                }
+
+                if (requireFlushBeforeRead && FlushCount == 0)
+                {
+                    throw new InvalidOperationException(
+                        "The request must be flushed before reading the response.");
                 }
 
                 return readStream.Read(
@@ -559,6 +596,18 @@ namespace UnitTest.Client
                 }
 
                 writeStream.Write(buffer, offset, count);
+                hasUnflushedWrite = true;
+            }
+
+            private void RecordFlush()
+            {
+                if (!hasUnflushedWrite)
+                {
+                    return;
+                }
+
+                hasUnflushedWrite = false;
+                FlushCount++;
             }
 
             protected override void Dispose(bool disposing)

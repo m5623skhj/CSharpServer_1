@@ -52,7 +52,7 @@ Rejects a null payload and sends an encoded packet through the internal `Connect
 
 ### `SendAsync(byte[] payload, CancellationToken cancellationToken)`
 
-Rejects a null payload, sends an encoded packet through the asynchronous connection path, and passes the caller cancellation token to the stream write.
+Rejects a null payload, sends an encoded packet through the asynchronous connection path, and passes the caller cancellation token to the stream write and flush.
 
 ### `Close()`
 

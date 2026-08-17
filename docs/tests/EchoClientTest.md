@@ -16,7 +16,7 @@ Verifies client request encoding and response decoding.
 
 ### `ScriptedStream`
 
-Test-only stream that supplies scripted read bytes, exposes the unread byte count, and records written bytes.
+Test-only stream that supplies scripted read bytes, exposes the unread byte count, records written bytes and flushes, and can reject response reads until the request is flushed.
 
 ### `WaitingReadStream`
 
@@ -25,6 +25,7 @@ Test-only stream that records writes, keeps async reads pending until cancellati
 ## Test Coverage
 
 - `SendEchoRequest` writes an encoded request packet.
+- `SendEchoRequestAsync` flushes the complete request before reading the response.
 - `SendEchoRequest` decodes one encoded response packet.
 - `SendEchoRequest` does not consume a second response that shares the underlying stream read buffer.
 - The stream overload supports an empty message and header-only response packet.

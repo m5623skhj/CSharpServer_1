@@ -173,6 +173,7 @@ public sealed class EchoClient
         var packet = PacketEncoder.Encode(payload);
 
         await stream.WriteAsync(packet, cancellationToken).ConfigureAwait(false);
+        await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
 
         var responsePayload = await ReadResponsePayloadAsync(stream, cancellationToken)
             .ConfigureAwait(false);

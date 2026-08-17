@@ -24,6 +24,18 @@ namespace UnitTest.Network
         }
 
         [Fact]
+        public void Send_FlushesStreamAfterWrite()
+        {
+            using var stream = new TrackingStream();
+            var transport = new StreamConnectionTransport(stream);
+
+            transport.Send([0x01]);
+
+            Assert.Equal(1, stream.FlushCount);
+            Assert.Equal(new[] { "write", "flush" }, stream.Operations);
+        }
+
+        [Fact]
         public void Send_ThrowsArgumentNullException_WhenDataIsNull()
         {
             using var stream = new MemoryStream();
@@ -60,6 +72,18 @@ namespace UnitTest.Network
             await cancellationTokenSource.CancelAsync();
 
             await Assert.ThrowsAnyAsync<OperationCanceledException>(() => sendTask);
+        }
+
+        [Fact]
+        public async Task SendAsync_FlushesStreamAfterWrite()
+        {
+            using var stream = new TrackingStream();
+            var transport = new StreamConnectionTransport(stream);
+
+            await transport.SendAsync(new byte[] { 0x01 }, CancellationToken.None);
+
+            Assert.Equal(1, stream.FlushCount);
+            Assert.Equal(new[] { "write", "flush" }, stream.Operations);
         }
 
         [Fact]
@@ -140,6 +164,38 @@ namespace UnitTest.Network
         {
             public bool IsDisposed { get; private set; }
             public int DisposeCount { get; private set; }
+            public int FlushCount { get; private set; }
+            public List<string> Operations { get; } = [];
+
+            public override void Write(ReadOnlySpan<byte> buffer)
+            {
+                Operations.Add("write");
+                base.Write(buffer);
+            }
+
+            public override ValueTask WriteAsync(
+                ReadOnlyMemory<byte> buffer,
+                CancellationToken cancellationToken = default)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                Operations.Add("write");
+                base.Write(buffer.Span);
+                return ValueTask.CompletedTask;
+            }
+
+            public override void Flush()
+            {
+                Operations.Add("flush");
+                FlushCount++;
+            }
+
+            public override Task FlushAsync(CancellationToken cancellationToken)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                Operations.Add("flush");
+                FlushCount++;
+                return Task.CompletedTask;
+            }
 
             protected override void Dispose(bool disposing)
             {

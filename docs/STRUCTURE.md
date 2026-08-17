@@ -75,10 +75,10 @@ The network layer adapts byte streams and TCP connections into packet sessions.
 - `Connection` connects `Session` to a transport and preserves async handler cancellation and failure propagation.
 - `StreamConnectionReader` serializes synchronous and asynchronous raw reads from a stream.
 - `StreamConnectionReader` reuses one read buffer and passes borrowed memory through the internal pipeline.
-- `StreamConnectionTransport` serializes sync and async writes while allowing close to dispose the underlying stream without waiting for the send lock; interruption timing depends on the concrete stream.
+- `StreamConnectionTransport` serializes each sync and async frame write through its flush while allowing close to dispose the underlying stream without waiting for the send lock; interruption timing depends on the concrete stream.
 - `StreamConnectionTransport` rejects a null stream at construction so transport failures fail at the API boundary.
 - `StreamConnectionTransport.Send(byte[])` rejects null byte arrays before stream writes.
-- `StreamConnection` sync and async send paths reject null payloads, encode them, and preserve caller cancellation for asynchronous writes.
+- `StreamConnection` sync and async send paths reject null payloads, encode them, and preserve caller cancellation for asynchronous writes and flushes.
 - Concurrent echo processing propagates cancellation through packet handlers and async stream writes.
 - `StreamConnection` composes stream reader, transport, and connection.
 - `StreamConnection` rejects null streams and packet handlers plus non-positive buffer sizes before composition.
@@ -120,7 +120,7 @@ The client currently exists as a test and manual verification tool.
 - `ClientOptions` rejects null argument arrays before reading parser state.
 - `ClientOptions` rejects message strings that cannot be encoded as valid UTF-8 without throwing parsing exceptions.
 - Client `Program` prints validation errors, sends a request, and converts expected network or protocol failures into exit code `1`.
-- `EchoClient` connects to a TCP server, sends an encoded echo request, waits for one encoded response, and decodes it.
+- `EchoClient` connects to a TCP server, writes and flushes an encoded echo request, waits for one encoded response, and decodes it.
 - `EchoClient` applies timeout or caller cancellation across TCP connect, request write, and response read.
 - `EchoClient` rejects null host, stream, and message arguments at the public API boundary before network or stream work begins.
 - `EchoClient` rejects empty or whitespace-only hosts before network work begins, matching `ClientOptions`.

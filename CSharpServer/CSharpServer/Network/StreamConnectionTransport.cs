@@ -25,6 +25,7 @@ namespace CSharpServer.Network
             {
                 ThrowIfClosed();
                 stream.Write(data);
+                stream.Flush();
             }
             finally
             {
@@ -41,6 +42,7 @@ namespace CSharpServer.Network
             {
                 ThrowIfClosed();
                 await stream.WriteAsync(data, cancellationToken);
+                await stream.FlushAsync(cancellationToken);
             }
             finally
             {
