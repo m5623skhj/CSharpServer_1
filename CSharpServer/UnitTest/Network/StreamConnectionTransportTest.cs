@@ -87,6 +87,58 @@ namespace UnitTest.Network
         }
 
         [Fact]
+        public async Task SendAsync_DoesNotCaptureSynchronizationContext()
+        {
+            using var stream = new AsynchronouslyCompletingWriteStream();
+            var transport = new StreamConnectionTransport(stream);
+            var synchronizationContext = new QueueingSynchronizationContext();
+            var sendCompletion = new TaskCompletionSource<Exception?>(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+            var synchronousWaitStarted = new TaskCompletionSource(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+            var sendThread = new Thread(() =>
+            {
+                SynchronizationContext.SetSynchronizationContext(synchronizationContext);
+                try
+                {
+                    var sendTask = transport.SendAsync(
+                            new byte[] { 0x01 },
+                            CancellationToken.None)
+                        .AsTask();
+                    synchronousWaitStarted.TrySetResult();
+                    sendTask.GetAwaiter().GetResult();
+                    sendCompletion.TrySetResult(null);
+                }
+                catch (Exception exception)
+                {
+                    sendCompletion.TrySetResult(exception);
+                }
+            })
+            {
+                IsBackground = true
+            };
+
+            sendThread.Start();
+            await synchronousWaitStarted.Task.WaitAsync(TimeSpan.FromSeconds(1));
+            stream.CompleteWrite();
+            var firstCompletion = await Task.WhenAny(
+                    sendCompletion.Task,
+                    synchronizationContext.ContinuationPosted.Task)
+                .WaitAsync(TimeSpan.FromSeconds(1));
+
+            try
+            {
+                Assert.Same(sendCompletion.Task, firstCompletion);
+                Assert.Null(await sendCompletion.Task);
+            }
+            finally
+            {
+                synchronizationContext.RunAll();
+                Assert.True(sendThread.Join(TimeSpan.FromSeconds(1)));
+            }
+        }
+
+        [Fact]
         public async Task SendAsync_ThrowsObjectDisposedException_WhenTransportIsClosed()
         {
             using var stream = new MemoryStream();
@@ -202,6 +254,94 @@ namespace UnitTest.Network
                 IsDisposed = true;
                 DisposeCount++;
                 base.Dispose(disposing);
+            }
+        }
+
+        private sealed class QueueingSynchronizationContext : SynchronizationContext
+        {
+            private readonly Queue<(SendOrPostCallback Callback, object? State)> callbacks = [];
+            private readonly object callbacksLock = new();
+
+            public TaskCompletionSource ContinuationPosted { get; } = new(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+
+            public override void Post(SendOrPostCallback callback, object? state)
+            {
+                lock (callbacksLock)
+                {
+                    callbacks.Enqueue((callback, state));
+                }
+
+                ContinuationPosted.TrySetResult();
+            }
+
+            public void RunAll()
+            {
+                while (true)
+                {
+                    (SendOrPostCallback Callback, object? State) continuation;
+                    lock (callbacksLock)
+                    {
+                        if (!callbacks.TryDequeue(out continuation))
+                        {
+                            return;
+                        }
+                    }
+
+                    continuation.Callback(continuation.State);
+                }
+            }
+        }
+
+        private sealed class AsynchronouslyCompletingWriteStream : Stream
+        {
+            private readonly TaskCompletionSource writeCompletion = new(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+
+            public override bool CanRead => false;
+            public override bool CanSeek => false;
+            public override bool CanWrite => true;
+            public override long Length => throw new NotSupportedException();
+
+            public override long Position
+            {
+                get => throw new NotSupportedException();
+                set => throw new NotSupportedException();
+            }
+
+            public override void Flush()
+            {
+            }
+
+            public override Task FlushAsync(CancellationToken cancellationToken)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                return Task.CompletedTask;
+            }
+
+            public override int Read(byte[] buffer, int offset, int count) =>
+                throw new NotSupportedException();
+
+            public override long Seek(long offset, SeekOrigin origin) =>
+                throw new NotSupportedException();
+
+            public override void SetLength(long value) =>
+                throw new NotSupportedException();
+
+            public override void Write(byte[] buffer, int offset, int count) =>
+                throw new NotSupportedException();
+
+            public override ValueTask WriteAsync(
+                ReadOnlyMemory<byte> buffer,
+                CancellationToken cancellationToken = default)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                return new ValueTask(writeCompletion.Task);
+            }
+
+            public void CompleteWrite()
+            {
+                writeCompletion.TrySetResult();
             }
         }
 

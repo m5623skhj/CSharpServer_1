@@ -30,6 +30,14 @@ Test-only stream that keeps an async write pending until cancellation.
 
 Test-only stream that blocks the first asynchronous write and detects overlapping write calls.
 
+### `QueueingSynchronizationContext`
+
+Test-only synchronization context that records posted continuations without running them automatically.
+
+### `AsynchronouslyCompletingWriteStream`
+
+Test-only stream that keeps an asynchronous write pending until the test completes it without using the caller context.
+
 ## Test Coverage
 
 - Constructor rejects a null stream.
@@ -39,6 +47,7 @@ Test-only stream that blocks the first asynchronous write and detects overlappin
 - `Send` rejects writes after close and returns its send slot after the exception.
 - `SendAsync` propagates cancellation to the stream write.
 - `SendAsync` flushes the stream after writing a complete frame.
+- `SendAsync` completes without posting its continuation to a caller synchronization context.
 - `SendAsync` rejects writes after close and returns its send slot after the exception.
 - Concurrent async sends verify semaphore occupancy and non-overlapping writes.
 - `Close` closes the stream.

@@ -37,12 +37,12 @@ namespace CSharpServer.Network
             ReadOnlyMemory<byte> data,
             CancellationToken cancellationToken)
         {
-            await sendSemaphore.WaitAsync(cancellationToken);
+            await sendSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
             try
             {
                 ThrowIfClosed();
-                await stream.WriteAsync(data, cancellationToken);
-                await stream.FlushAsync(cancellationToken);
+                await stream.WriteAsync(data, cancellationToken).ConfigureAwait(false);
+                await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
             }
             finally
             {
