@@ -98,6 +98,7 @@ Listener startup is serialized with disposal so a concurrent `Start` cannot reop
 - Fixed-count and open-ended modes share the same unsuccessful-handler cancellation behavior.
 - Unexpected accept failures cancel and close active handlers before the original accept exception is propagated.
 - Concurrent handlers await `StreamConnection.ReadUntilEndAsync` without wrapping synchronous reads in `Task.Run`.
+- Default client handlers do not capture a caller synchronization context while awaiting connection completion, including when accept completes synchronously for a queued client.
 - Concurrent echo responses use cancellation-aware asynchronous writes.
 - Expected cancellation from an active client read is handled as normal server shutdown.
 - Client-level connection, stream, and `InvalidDataException` failures are isolated so one bad client does not fault the server loop.

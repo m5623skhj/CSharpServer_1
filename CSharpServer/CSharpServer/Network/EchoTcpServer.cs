@@ -340,7 +340,8 @@ namespace CSharpServer.Network
                 {
                     await using var stream = client.GetStream();
                     var connection = EchoStreamConnectionFactory.Create(stream, bufferSize);
-                    await connection.ReadUntilEndAsync(cancellationToken, clientIdleTimeout);
+                    await connection.ReadUntilEndAsync(cancellationToken, clientIdleTimeout)
+                        .ConfigureAwait(false);
                 }
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)

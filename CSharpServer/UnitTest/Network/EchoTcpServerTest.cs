@@ -218,6 +218,68 @@ namespace UnitTest.Network
         }
 
         [Fact]
+        public async Task AcceptAndHandleConcurrently_WithPreconnectedClient_DoesNotCaptureSynchronizationContext()
+        {
+            using var server = new EchoTcpServer(
+                IPAddress.Loopback,
+                port: 0,
+                inBufferSize: 2,
+                maxConcurrentClients: 1,
+                clientIdleTimeout: TimeSpan.FromSeconds(5));
+            using var client = new TcpClient();
+            var context = new QueueingSynchronizationContext();
+            var loopStarted = new TaskCompletionSource(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+            var completion = new TaskCompletionSource<Exception?>(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+            server.Start();
+            await client.ConnectAsync(IPAddress.Loopback, server.Port);
+            var thread = new Thread(() =>
+            {
+                SynchronizationContext.SetSynchronizationContext(context);
+                try
+                {
+                    var serverTask = server.AcceptAndHandleConcurrently(clientCount: 1);
+                    loopStarted.TrySetResult();
+                    serverTask.GetAwaiter().GetResult();
+                    completion.TrySetResult(null);
+                }
+                catch (Exception exception)
+                {
+                    completion.TrySetResult(exception);
+                }
+            })
+            {
+                IsBackground = true
+            };
+
+            thread.Start();
+            try
+            {
+                await loopStarted.Task.WaitAsync(TimeSpan.FromSeconds(1));
+                Assert.True(SpinWait.SpinUntil(
+                    () => server.ActiveClientCount == 1,
+                    TimeSpan.FromSeconds(1)));
+                client.Close();
+                var handlerContinuation = await Task.WhenAny(
+                        completion.Task,
+                        context.ContinuationPosted.Task)
+                    .WaitAsync(TimeSpan.FromSeconds(1));
+
+                Assert.Same(completion.Task, handlerContinuation);
+                Assert.Null(await completion.Task);
+                Assert.Equal(0, server.ActiveClientCount);
+            }
+            finally
+            {
+                client.Close();
+                context.RunQueuedCallbacks();
+                server.Dispose();
+                Assert.True(thread.Join(TimeSpan.FromSeconds(1)));
+            }
+        }
+
+        [Fact]
         public async Task AcceptAndHandleConcurrently_ReturnsAfterCancellation_WhenAcceptedClientStaysOpen()
         {
             using var server = new EchoTcpServer(IPAddress.Loopback, port: 0, inBufferSize: 2);
