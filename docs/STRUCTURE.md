@@ -90,6 +90,7 @@ The network layer adapts byte streams and TCP connections into packet sessions.
 - `ServerOptions` rejects null argument arrays before reading parser state.
 - `ServerOptions` supplies the concurrent client limit and client idle timeout.
 - `ServerApplication` owns listener startup and passes validated resource limits to the TCP server.
+- `ServerApplication` awaits server shutdown without capturing a caller synchronization context.
 - `ServerApplication` rejects null options before reading server configuration.
 - `EchoTcpServer` accepts TCP clients and handles each as an echo stream connection.
 - `EchoTcpServer` validates its bind port as `0..65535`, preserving port `0` for OS-assigned test and runtime binding.

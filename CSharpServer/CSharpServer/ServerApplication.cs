@@ -20,6 +20,7 @@ public sealed class ServerApplication
         server.Start();
 
         Console.WriteLine($"CSharpServer listening on 127.0.0.1:{server.Port}");
-        await server.AcceptAndHandleConcurrently(cancellationToken);
+        await server.AcceptAndHandleConcurrently(cancellationToken)
+            .ConfigureAwait(false);
     }
 }

@@ -25,6 +25,7 @@ Starts and runs the loopback TCP echo server until cancellation is requested.
 - Starts the listener and prints its bound endpoint.
 - Runs the open-ended concurrent accept loop.
 - Returns after cancellation stops accepting clients and active handlers finish.
+- Does not capture a caller synchronization context while awaiting server shutdown.
 
 ## Notes
 
