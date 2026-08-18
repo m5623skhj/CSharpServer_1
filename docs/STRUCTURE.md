@@ -76,6 +76,7 @@ The network layer adapts byte streams and TCP connections into packet sessions.
 - `Connection` connects `Session` to a transport and preserves async handler cancellation and failure propagation.
 - `StreamConnectionReader` serializes synchronous and asynchronous raw reads from a stream.
 - `StreamConnectionReader` reuses one read buffer and passes borrowed memory through the internal pipeline.
+- `StreamConnectionReader` avoids synchronization-context capture across async read-slot, stream-read, and handler waits, including idle-timeout reads.
 - `StreamConnectionTransport` serializes each sync and async frame write through its flush while allowing close to dispose the underlying stream without waiting for the send lock; interruption timing depends on the concrete stream.
 - `StreamConnectionTransport` avoids synchronization-context capture across async slot, write, and flush waits.
 - `StreamConnectionTransport` rejects a null stream at construction so transport failures fail at the API boundary.

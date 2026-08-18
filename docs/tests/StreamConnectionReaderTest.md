@@ -26,6 +26,14 @@ Test-only stream that waits asynchronously until its read cancellation token is 
 
 Test-only stream that records the backing array supplied to each async read.
 
+### `QueueingSynchronizationContext`
+
+Test-only synchronization context that records posted continuations without running them automatically.
+
+### `AsynchronouslyCompletingReadStream`
+
+Test-only stream that keeps a read pending until the test supplies one byte without using the caller context.
+
 ## Test Coverage
 
 - Null stream and data handler constructor arguments are rejected.
@@ -37,3 +45,4 @@ Test-only stream that records the backing array supplied to each async read.
 - Concurrent reads verify the semaphore slot is restored after completion.
 - `ReadOnceAsync` stops waiting and propagates cancellation without invoking the data handler.
 - Repeated async reads reuse the same backing buffer.
+- Normal and idle-timeout reads complete stream and handler continuations without posting to a caller synchronization context.

@@ -57,16 +57,18 @@ namespace CSharpServer.Network
 
         public async Task<bool> ReadOnceAsync(CancellationToken cancellationToken)
         {
-            await readSemaphore.WaitAsync(cancellationToken);
+            await readSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
             try
             {
-                var readCount = await stream.ReadAsync(buffer, cancellationToken);
+                var readCount = await stream.ReadAsync(buffer, cancellationToken)
+                    .ConfigureAwait(false);
                 if (readCount == 0)
                 {
                     return false;
                 }
 
-                await asyncDataHandler(buffer.AsMemory(0, readCount), cancellationToken);
+                await asyncDataHandler(buffer.AsMemory(0, readCount), cancellationToken)
+                    .ConfigureAwait(false);
                 return true;
             }
             finally
@@ -84,7 +86,7 @@ namespace CSharpServer.Network
                 throw new ArgumentOutOfRangeException(nameof(idleTimeout));
             }
 
-            await readSemaphore.WaitAsync(cancellationToken);
+            await readSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
             try
             {
                 using var idleCancellation =
@@ -94,7 +96,8 @@ namespace CSharpServer.Network
                 int readCount;
                 try
                 {
-                    readCount = await stream.ReadAsync(buffer, idleCancellation.Token);
+                    readCount = await stream.ReadAsync(buffer, idleCancellation.Token)
+                        .ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                     when (!cancellationToken.IsCancellationRequested
@@ -110,7 +113,7 @@ namespace CSharpServer.Network
 
                 await asyncDataHandler(
                     buffer.AsMemory(0, readCount),
-                    cancellationToken);
+                    cancellationToken).ConfigureAwait(false);
                 return true;
             }
             finally
