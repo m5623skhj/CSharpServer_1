@@ -105,25 +105,40 @@ namespace CSharpServer.Network
         public void AcceptAndHandleOnce()
         {
             ThrowIfDisposed();
-            TcpClient client;
+            var slotAcquired = false;
             try
             {
-                client = listener.AcceptTcpClient();
-            }
-            catch (Exception exception)
-                when (IsDisposing()
-                    && IsListenerShutdownException(exception))
-            {
-                throw new ObjectDisposedException(nameof(EchoTcpServer));
-            }
+                WaitForClientSlot();
+                slotAcquired = true;
+                TcpClient client;
+                try
+                {
+                    client = listener.AcceptTcpClient();
+                }
+                catch (Exception exception)
+                    when (IsDisposing()
+                        && IsListenerShutdownException(exception))
+                {
+                    throw new ObjectDisposedException(nameof(EchoTcpServer));
+                }
 
-            if (!TryTrackClient(client))
-            {
-                client.Dispose();
-                throw new ObjectDisposedException(nameof(EchoTcpServer));
-            }
+                if (!TryTrackClient(client))
+                {
+                    client.Dispose();
+                    throw new ObjectDisposedException(nameof(EchoTcpServer));
+                }
 
-            HandleTrackedClient(client);
+                HandleTrackedClient(client);
+            }
+            finally
+            {
+                if (slotAcquired)
+                {
+                    ReleaseClientSlot();
+                }
+
+                DisposeClientSlotsIfSafe();
+            }
         }
 
         public void AcceptAndHandle(int clientCount)
@@ -312,7 +327,6 @@ namespace CSharpServer.Network
             {
                 UntrackClient(client);
                 Interlocked.Decrement(ref activeClientCount);
-                DisposeClientSlotsIfSafe();
             }
         }
 
@@ -376,6 +390,29 @@ namespace CSharpServer.Network
             try
             {
                 await clientSlots.WaitAsync(cancellationToken).ConfigureAwait(false);
+            }
+            finally
+            {
+                Interlocked.Decrement(ref waitingClientSlotCount);
+            }
+        }
+
+        private void WaitForClientSlot()
+        {
+            Interlocked.Increment(ref waitingClientSlotCount);
+            try
+            {
+                try
+                {
+                    clientSlots.Wait(disposeToken);
+                }
+                catch (Exception exception)
+                    when (IsDisposing()
+                        && exception is OperationCanceledException
+                            or ObjectDisposedException)
+                {
+                    throw new ObjectDisposedException(nameof(EchoTcpServer));
+                }
             }
             finally
             {

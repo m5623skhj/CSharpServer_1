@@ -49,11 +49,13 @@ Listener startup is serialized with disposal so a concurrent `Start` cannot reop
 
 ### `AcceptAndHandleOnce()`
 
+- Acquires a shared client slot before accepting so concurrent synchronous calls honor the configured client limit.
 - Accepts one `TcpClient`.
 - Gets its stream.
 - Creates an echo `StreamConnection`.
 - Reads until the client closes the stream.
 - Throws `ObjectDisposedException` when disposal interrupts a blocked accept instead of exposing a listener shutdown socket error.
+- Throws `ObjectDisposedException` when disposal interrupts its wait for a client slot.
 
 ### `AcceptAndHandle(int clientCount)`
 
@@ -87,7 +89,8 @@ Listener startup is serialized with disposal so a concurrent `Start` cannot reop
 
 ## Internal Behavior
 
-- Connection slots are returned from handler `finally` blocks, including failure and cancellation paths.
+- Connection slots are returned after handler completion, including failure and cancellation paths.
+- Synchronous accept calls hold the same global connection slots through handler completion and return them on every accept, tracking, handler, and disposal path.
 - Listener start and stop operations share a lifecycle lock to preserve the disposed state during concurrent calls.
 - Synchronous and asynchronous handler completion retry deferred connection-slot disposal when shutdown began during handling.
 - Accepted clients are tracked at server scope until their handlers complete.

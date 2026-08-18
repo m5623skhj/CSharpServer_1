@@ -53,6 +53,127 @@ namespace UnitTest.Network
         }
 
         [Fact]
+        public async Task AcceptAndHandleOnce_HonorsMaxConcurrentClientsAcrossConcurrentCalls()
+        {
+            using var server = new EchoTcpServer(
+                IPAddress.Loopback,
+                port: 0,
+                inBufferSize: 2,
+                maxConcurrentClients: 1,
+                clientIdleTimeout: TimeSpan.FromSeconds(5));
+            using var firstClient = new TcpClient();
+            using var secondClient = new TcpClient();
+            server.Start();
+            var firstServerTask = Task.Run(server.AcceptAndHandleOnce);
+            Task? secondServerTask = null;
+
+            try
+            {
+                await firstClient.ConnectAsync(IPAddress.Loopback, server.Port);
+                var packet = PacketEncoder.Encode([0x01]);
+                var firstStream = firstClient.GetStream();
+                await firstStream.WriteAsync(packet);
+                var firstResponse = new byte[packet.Length];
+                await firstStream.ReadExactlyAsync(firstResponse);
+                Assert.Equal(packet, firstResponse);
+                Assert.Equal(1, server.ActiveClientCount);
+
+                secondServerTask = Task.Run(server.AcceptAndHandleOnce);
+                Assert.True(SpinWait.SpinUntil(
+                    () => server.WaitingClientSlotCount == 1,
+                    TimeSpan.FromSeconds(1)));
+                Assert.Equal(1, server.ActiveClientCount);
+
+                await secondClient.ConnectAsync(IPAddress.Loopback, server.Port);
+                var secondStream = secondClient.GetStream();
+                await secondStream.WriteAsync(packet);
+                firstClient.Close();
+                var secondResponse = new byte[packet.Length];
+                await secondStream.ReadExactlyAsync(secondResponse)
+                    .AsTask()
+                    .WaitAsync(TimeSpan.FromSeconds(1));
+                Assert.Equal(packet, secondResponse);
+
+                secondClient.Close();
+                await Task.WhenAll(firstServerTask, secondServerTask)
+                    .WaitAsync(TimeSpan.FromSeconds(1));
+                Assert.Equal(0, server.ActiveClientCount);
+                Assert.Equal(1, server.AvailableClientSlotCount);
+            }
+            finally
+            {
+                firstClient.Close();
+                secondClient.Close();
+                server.Dispose();
+                try
+                {
+                    await firstServerTask.WaitAsync(TimeSpan.FromSeconds(1));
+                    if (secondServerTask is not null)
+                    {
+                        await secondServerTask.WaitAsync(TimeSpan.FromSeconds(1));
+                    }
+                }
+                catch (ObjectDisposedException)
+                {
+                }
+            }
+        }
+
+        [Fact]
+        public async Task Dispose_ReleasesSynchronousClientSlotWaiterAndDisposesSlots()
+        {
+            var server = new EchoTcpServer(
+                IPAddress.Loopback,
+                port: 0,
+                inBufferSize: 2,
+                maxConcurrentClients: 1,
+                clientIdleTimeout: TimeSpan.FromSeconds(5));
+            using var client = new TcpClient();
+            server.Start();
+            var firstServerTask = Task.Run(server.AcceptAndHandleOnce);
+            Task? waitingServerTask = null;
+
+            try
+            {
+                await client.ConnectAsync(IPAddress.Loopback, server.Port);
+                var packet = PacketEncoder.Encode([0x01]);
+                var stream = client.GetStream();
+                await stream.WriteAsync(packet);
+                var response = new byte[packet.Length];
+                await stream.ReadExactlyAsync(response);
+                Assert.Equal(packet, response);
+
+                waitingServerTask = Task.Run(server.AcceptAndHandleOnce);
+                Assert.True(SpinWait.SpinUntil(
+                    () => server.WaitingClientSlotCount == 1,
+                    TimeSpan.FromSeconds(1)));
+
+                server.Dispose();
+
+                await firstServerTask.WaitAsync(TimeSpan.FromSeconds(1));
+                await Assert.ThrowsAsync<ObjectDisposedException>(() =>
+                    waitingServerTask.WaitAsync(TimeSpan.FromSeconds(1)));
+                Assert.True(server.AreClientSlotsDisposed);
+            }
+            finally
+            {
+                client.Close();
+                server.Dispose();
+                try
+                {
+                    await firstServerTask.WaitAsync(TimeSpan.FromSeconds(1));
+                    if (waitingServerTask is not null)
+                    {
+                        await waitingServerTask.WaitAsync(TimeSpan.FromSeconds(1));
+                    }
+                }
+                catch (ObjectDisposedException)
+                {
+                }
+            }
+        }
+
+        [Fact]
         public async Task AcceptAndHandleConcurrently_ReturnsEchoResponsesToMultipleClients()
         {
             using var server = new EchoTcpServer(IPAddress.Loopback, port: 0, inBufferSize: 2);

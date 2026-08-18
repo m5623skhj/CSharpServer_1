@@ -27,6 +27,8 @@ Test-only synchronization context that queues posted continuations so server-loo
 - Verifies an empty message round trip over the real loopback connection.
 - Waits for the one-client server task to finish.
 - Verifies that `AcceptAndHandle(2)` can return echo responses to two clients sequentially.
+- Verifies that concurrent `AcceptAndHandleOnce` calls share the configured client limit and restore the slot after both handlers complete.
+- Verifies that disposal releases a synchronous slot waiter with `ObjectDisposedException` and completes deferred slot disposal.
 - Verifies that `AcceptAndHandleConcurrently(2)` can return echo responses to two asynchronously handled clients.
 - Verifies that fixed-count concurrent accept and handler completion do not post continuations to a caller synchronization context.
 - Verifies that `AcceptAndHandleConcurrently(CancellationToken)` returns after cancellation while preserving accepted client echo responses.
