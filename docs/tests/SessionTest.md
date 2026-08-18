@@ -18,6 +18,10 @@ Verifies session-level packet framing around payload handlers.
 
 Test-only async handler that blocks the first callback and detects overlapping packet callbacks.
 
+### `QueueingSynchronizationContext`
+
+Test-only synchronization context that records posted continuations without running them automatically.
+
 ## Test Coverage
 
 - Null packet handlers and packet senders are rejected during construction.
@@ -33,4 +37,5 @@ Test-only async handler that blocks the first callback and detects overlapping p
 - Async receive passes the decoded payload and caller cancellation token to the handler.
 - Cancellation while waiting for the receive slot does not buffer the canceled receive data.
 - Handler failure releases the receive slot so later packets can still be processed.
+- Async receive completes without posting its continuation to a caller synchronization context.
 - Async send passes the encoded packet and caller cancellation token to the sender.

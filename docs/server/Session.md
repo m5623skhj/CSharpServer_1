@@ -33,6 +33,7 @@ Rejects null payload handlers and packet senders during construction.
 - Passes the caller cancellation token to packet handlers.
 - Does not append receive data when cancellation occurs while waiting for the receive slot.
 - Releases the receive slot when packet handling fails or is canceled.
+- Avoids capturing the caller's synchronization context while waiting for the receive slot or packet handlers.
 
 ### `Send(byte[] payload)`
 
@@ -46,6 +47,8 @@ Encodes the payload and sends it through the asynchronous packet sender with the
 ## Notes
 
 Sync and async receive calls share one semaphore to protect packet buffer state and handler order.
+
+Async receive internals avoid synchronization-context capture so a synchronously bridged receive does not depend on pumping a UI or single-threaded context before releasing the receive slot.
 
 `Send` synchronization depends on the configured packet sender. Server connections use the thread-safe `StreamConnectionTransport` sender.
 

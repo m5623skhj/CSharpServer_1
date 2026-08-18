@@ -81,14 +81,14 @@ namespace CSharpServer.Network
             ReadOnlyMemory<byte> data,
             CancellationToken cancellationToken)
         {
-            await receiveSemaphore.WaitAsync(cancellationToken);
+            await receiveSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
             try
             {
                 packetBuffer.Append(data.Span);
 
                 while (packetBuffer.TryReadPacket(out var packet) && packet is not null)
                 {
-                    await asyncPacketHandler(packet, cancellationToken);
+                    await asyncPacketHandler(packet, cancellationToken).ConfigureAwait(false);
                 }
             }
             finally

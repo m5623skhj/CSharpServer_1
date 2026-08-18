@@ -291,6 +291,100 @@ namespace UnitTest.Session
             Assert.Equal(1, session.AvailableReceiveSlotCount);
         }
 
+        [Fact]
+        public async Task ReceiveAsync_DoesNotCaptureSynchronizationContext()
+        {
+            var handlerCompletion = new TaskCompletionSource(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+            var session = new NetworkSession(
+                _ => { },
+                _ => { },
+                (_, _) => new ValueTask(handlerCompletion.Task),
+                (_, _) => ValueTask.CompletedTask);
+            var synchronizationContext = new QueueingSynchronizationContext();
+            var receiveCompletion = new TaskCompletionSource<Exception?>(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+            var synchronousWaitStarted = new TaskCompletionSource(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+            var receiveThread = new Thread(() =>
+            {
+                SynchronizationContext.SetSynchronizationContext(synchronizationContext);
+                try
+                {
+                    var receiveTask = session.ReceiveAsync(
+                            PacketEncoder.Encode([0x01]),
+                            CancellationToken.None)
+                        .AsTask();
+                    synchronousWaitStarted.TrySetResult();
+                    receiveTask.GetAwaiter().GetResult();
+                    receiveCompletion.TrySetResult(null);
+                }
+                catch (Exception exception)
+                {
+                    receiveCompletion.TrySetResult(exception);
+                }
+            })
+            {
+                IsBackground = true
+            };
+
+            receiveThread.Start();
+            await synchronousWaitStarted.Task.WaitAsync(TimeSpan.FromSeconds(1));
+            handlerCompletion.TrySetResult();
+            var firstCompletion = await Task.WhenAny(
+                    receiveCompletion.Task,
+                    synchronizationContext.ContinuationPosted.Task)
+                .WaitAsync(TimeSpan.FromSeconds(1));
+
+            try
+            {
+                Assert.Same(receiveCompletion.Task, firstCompletion);
+                Assert.Null(await receiveCompletion.Task);
+                Assert.Equal(1, session.AvailableReceiveSlotCount);
+            }
+            finally
+            {
+                synchronizationContext.RunAll();
+                Assert.True(receiveThread.Join(TimeSpan.FromSeconds(1)));
+            }
+        }
+
+        private sealed class QueueingSynchronizationContext : SynchronizationContext
+        {
+            private readonly Queue<(SendOrPostCallback Callback, object? State)> callbacks = [];
+            private readonly object callbacksLock = new();
+
+            public TaskCompletionSource ContinuationPosted { get; } = new(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+
+            public override void Post(SendOrPostCallback callback, object? state)
+            {
+                lock (callbacksLock)
+                {
+                    callbacks.Enqueue((callback, state));
+                }
+
+                ContinuationPosted.TrySetResult();
+            }
+
+            public void RunAll()
+            {
+                while (true)
+                {
+                    (SendOrPostCallback Callback, object? State) continuation;
+                    lock (callbacksLock)
+                    {
+                        if (!callbacks.TryDequeue(out continuation))
+                        {
+                            return;
+                        }
+                    }
+
+                    continuation.Callback(continuation.State);
+                }
+            }
+        }
+
         private sealed class ConcurrentAsyncPacketHandler
         {
             private int activeHandlerCount;
