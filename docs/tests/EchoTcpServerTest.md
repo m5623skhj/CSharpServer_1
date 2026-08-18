@@ -30,6 +30,7 @@ Test-only synchronization context that queues posted continuations so server-loo
 - Verifies that `AcceptAndHandleConcurrently(2)` can return echo responses to two asynchronously handled clients.
 - Verifies that fixed-count concurrent accept and handler completion do not post continuations to a caller synchronization context.
 - Verifies that `AcceptAndHandleConcurrently(CancellationToken)` returns after cancellation while preserving accepted client echo responses.
+- Verifies that cancellation completes an open-ended accept without posting to a caller synchronization context.
 - Verifies that cancellation stops an already accepted idle client's asynchronous read so the server loop can return.
 - Uses a completed echo round trip instead of an arbitrary delay to prove the client was accepted before cancellation.
 - Verifies that disposal closes active clients and completes the open-ended accept loop.

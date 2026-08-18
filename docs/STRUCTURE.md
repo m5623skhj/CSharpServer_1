@@ -95,6 +95,7 @@ The network layer adapts byte streams and TCP connections into packet sessions.
 - `EchoTcpServer` validates its bind port as `0..65535`, preserving port `0` for OS-assigned test and runtime binding.
 - `EchoTcpServer` can run either for a fixed client count or as a cancellable concurrent accept loop.
 - Fixed-count `EchoTcpServer` accepts and handler waits avoid caller synchronization-context capture.
+- Open-ended `EchoTcpServer` accept and cancellation cleanup waits also avoid caller synchronization-context capture.
 - A semaphore bounds active client handlers, and slots are released on completion, failure, or cancellation.
 - Faulted or unexpectedly canceled handlers stop the accept loop immediately and propagate their completion error.
 - Fixed-count mode also stops remaining accepts instead of waiting for the configured count after a handler fault or unexpected cancellation.

@@ -83,6 +83,7 @@ Listener startup is serialized with disposal so a concurrent `Start` cannot reop
 - Stops waiting for new clients when cancellation is requested.
 - Closes already accepted active clients when cancellation is requested.
 - Waits for accepted client handler tasks to complete before returning.
+- Does not capture a caller synchronization context while accepting or completing cancellation cleanup.
 
 ## Internal Behavior
 

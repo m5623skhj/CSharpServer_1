@@ -235,10 +235,12 @@ namespace CSharpServer.Network
                 try
                 {
                     PruneCompletedClientTasks(clientTasks);
-                    await WaitForClientSlotAsync(acceptCancellation.Token);
+                    await WaitForClientSlotAsync(acceptCancellation.Token)
+                        .ConfigureAwait(false);
                     slotAcquired = true;
                     acceptedClient = await listener.AcceptTcpClientAsync(
-                        acceptCancellation.Token);
+                            acceptCancellation.Token)
+                        .ConfigureAwait(false);
                     if (!TryTrackClient(acceptedClient))
                     {
                         acceptedClient.Dispose();
@@ -289,13 +291,13 @@ namespace CSharpServer.Network
 
                     acceptCancellation.Cancel();
                     CloseActiveClients();
-                    await ObserveClientTasksAsync(clientTasks);
+                    await ObserveClientTasksAsync(clientTasks).ConfigureAwait(false);
                     throw;
                 }
             }
 
             CloseActiveClients();
-            await Task.WhenAll(clientTasks);
+            await Task.WhenAll(clientTasks).ConfigureAwait(false);
             DisposeClientSlotsIfSafe();
         }
 

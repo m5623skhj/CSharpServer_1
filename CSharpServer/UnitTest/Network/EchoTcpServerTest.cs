@@ -163,6 +163,61 @@ namespace UnitTest.Network
         }
 
         [Fact]
+        public async Task AcceptAndHandleConcurrently_WithCancellation_DoesNotCaptureSynchronizationContext()
+        {
+            using var server = new EchoTcpServer(
+                IPAddress.Loopback,
+                port: 0,
+                inBufferSize: 2);
+            using var cancellation = new CancellationTokenSource();
+            var context = new QueueingSynchronizationContext();
+            var loopStarted = new TaskCompletionSource(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+            var completion = new TaskCompletionSource<Exception?>(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+            server.Start();
+            var thread = new Thread(() =>
+            {
+                SynchronizationContext.SetSynchronizationContext(context);
+                try
+                {
+                    var serverTask = server.AcceptAndHandleConcurrently(cancellation.Token);
+                    loopStarted.TrySetResult();
+                    serverTask.GetAwaiter().GetResult();
+                    completion.TrySetResult(null);
+                }
+                catch (Exception exception)
+                {
+                    completion.TrySetResult(exception);
+                }
+            })
+            {
+                IsBackground = true
+            };
+
+            thread.Start();
+            try
+            {
+                await loopStarted.Task.WaitAsync(TimeSpan.FromSeconds(1));
+                await cancellation.CancelAsync();
+                var cancellationContinuation = await Task.WhenAny(
+                        completion.Task,
+                        context.ContinuationPosted.Task)
+                    .WaitAsync(TimeSpan.FromSeconds(1));
+
+                Assert.Same(completion.Task, cancellationContinuation);
+                Assert.Null(await completion.Task);
+            }
+            finally
+            {
+                await cancellation.CancelAsync();
+                context.RunQueuedCallbacks();
+                server.Dispose();
+                Assert.True(thread.Join(TimeSpan.FromSeconds(1)));
+            }
+        }
+
+        [Fact]
         public async Task AcceptAndHandleConcurrently_ReturnsAfterCancellation_WhenAcceptedClientStaysOpen()
         {
             using var server = new EchoTcpServer(IPAddress.Loopback, port: 0, inBufferSize: 2);
