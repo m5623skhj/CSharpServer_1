@@ -14,6 +14,10 @@ Tests real loopback TCP echo behavior.
 
 Verifies `EchoTcpServer` and `EchoClient` integration over loopback TCP.
 
+### `QueueingSynchronizationContext`
+
+Test-only synchronization context that queues posted continuations so server-loop context capture can be detected deterministically.
+
 ## Test Coverage
 
 - Starts `EchoTcpServer` on loopback with OS-assigned port.
@@ -24,6 +28,7 @@ Verifies `EchoTcpServer` and `EchoClient` integration over loopback TCP.
 - Waits for the one-client server task to finish.
 - Verifies that `AcceptAndHandle(2)` can return echo responses to two clients sequentially.
 - Verifies that `AcceptAndHandleConcurrently(2)` can return echo responses to two asynchronously handled clients.
+- Verifies that fixed-count concurrent accept and handler completion do not post continuations to a caller synchronization context.
 - Verifies that `AcceptAndHandleConcurrently(CancellationToken)` returns after cancellation while preserving accepted client echo responses.
 - Verifies that cancellation stops an already accepted idle client's asynchronous read so the server loop can return.
 - Uses a completed echo round trip instead of an arbitrary delay to prove the client was accepted before cancellation.

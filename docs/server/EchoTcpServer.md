@@ -72,6 +72,7 @@ Listener startup is serialized with disposal so a concurrent `Start` cannot reop
 - Propagates a handler fault without waiting for the remaining client count to connect.
 - Propagates unexpected handler cancellation without waiting for the remaining client count to connect.
 - Waits for all client handler tasks to complete.
+- Does not capture a caller synchronization context while waiting for slots, accepts, handlers, or task observation.
 
 ### `AcceptAndHandleConcurrently(CancellationToken cancellationToken)`
 

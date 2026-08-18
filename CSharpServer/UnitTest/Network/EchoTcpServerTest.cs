@@ -71,6 +71,78 @@ namespace UnitTest.Network
         }
 
         [Fact]
+        public async Task AcceptAndHandleConcurrently_WithClientCount_DoesNotCaptureSynchronizationContext()
+        {
+            var handlerEntered = new TaskCompletionSource(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+            var handlerCompletion = new TaskCompletionSource(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+            using var server = new EchoTcpServer(
+                IPAddress.Loopback,
+                port: 0,
+                inBufferSize: 2,
+                maxConcurrentClients: 1,
+                clientIdleTimeout: TimeSpan.FromSeconds(5),
+                clientHandler: (_, _) =>
+                {
+                    handlerEntered.TrySetResult();
+                    return handlerCompletion.Task;
+                });
+            using var client = new TcpClient();
+            var context = new QueueingSynchronizationContext();
+            var loopStarted = new TaskCompletionSource(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+            var completion = new TaskCompletionSource<Exception?>(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+            server.Start();
+            var thread = new Thread(() =>
+            {
+                SynchronizationContext.SetSynchronizationContext(context);
+                try
+                {
+                    var serverTask = server.AcceptAndHandleConcurrently(clientCount: 1);
+                    loopStarted.TrySetResult();
+                    serverTask.GetAwaiter().GetResult();
+                    completion.TrySetResult(null);
+                }
+                catch (Exception exception)
+                {
+                    completion.TrySetResult(exception);
+                }
+            })
+            {
+                IsBackground = true
+            };
+
+            thread.Start();
+            try
+            {
+                await loopStarted.Task.WaitAsync(TimeSpan.FromSeconds(1));
+                await client.ConnectAsync(IPAddress.Loopback, server.Port);
+                var acceptContinuation = await Task.WhenAny(
+                        handlerEntered.Task,
+                        context.ContinuationPosted.Task)
+                    .WaitAsync(TimeSpan.FromSeconds(1));
+                Assert.Same(handlerEntered.Task, acceptContinuation);
+
+                handlerCompletion.TrySetResult();
+                var handlerContinuation = await Task.WhenAny(
+                        completion.Task,
+                        context.ContinuationPosted.Task)
+                    .WaitAsync(TimeSpan.FromSeconds(1));
+                Assert.Same(completion.Task, handlerContinuation);
+                Assert.Null(await completion.Task);
+            }
+            finally
+            {
+                handlerCompletion.TrySetResult();
+                context.RunQueuedCallbacks();
+                server.Dispose();
+                Assert.True(thread.Join(TimeSpan.FromSeconds(1)));
+            }
+        }
+
+        [Fact]
         public async Task AcceptAndHandleConcurrently_ReturnsWhenCancellationIsRequested()
         {
             using var server = new EchoTcpServer(IPAddress.Loopback, port: 0, inBufferSize: 2);
@@ -608,6 +680,42 @@ namespace UnitTest.Network
             server.Dispose();
 
             Assert.Throws<ObjectDisposedException>(() => server.AcceptAndHandle(clientCount: 1));
+        }
+
+        private sealed class QueueingSynchronizationContext : SynchronizationContext
+        {
+            private readonly Queue<(SendOrPostCallback Callback, object? State)> callbacks = [];
+            private readonly object callbacksLock = new();
+
+            public TaskCompletionSource ContinuationPosted { get; } = new(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+
+            public override void Post(SendOrPostCallback callback, object? state)
+            {
+                lock (callbacksLock)
+                {
+                    callbacks.Enqueue((callback, state));
+                }
+
+                ContinuationPosted.TrySetResult();
+            }
+
+            public void RunQueuedCallbacks()
+            {
+                while (true)
+                {
+                    (SendOrPostCallback Callback, object? State) callback;
+                    lock (callbacksLock)
+                    {
+                        if (!callbacks.TryDequeue(out callback))
+                        {
+                            return;
+                        }
+                    }
+
+                    callback.Callback(callback.State);
+                }
+            }
         }
 
         [Fact]

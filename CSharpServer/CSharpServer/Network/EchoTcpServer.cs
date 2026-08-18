@@ -153,10 +153,12 @@ namespace CSharpServer.Network
                 TcpClient? acceptedClient = null;
                 try
                 {
-                    await WaitForClientSlotAsync(handlerFailureCancellation.Token);
+                    await WaitForClientSlotAsync(handlerFailureCancellation.Token)
+                        .ConfigureAwait(false);
                     slotAcquired = true;
                     acceptedClient = await listener.AcceptTcpClientAsync(
-                        handlerFailureCancellation.Token);
+                            handlerFailureCancellation.Token)
+                        .ConfigureAwait(false);
                     if (!TryTrackClient(acceptedClient))
                     {
                         acceptedClient.Dispose();
@@ -209,12 +211,12 @@ namespace CSharpServer.Network
 
                     handlerFailureCancellation.Cancel();
                     CloseActiveClients();
-                    await ObserveClientTasksAsync(clientTasks);
+                    await ObserveClientTasksAsync(clientTasks).ConfigureAwait(false);
                     throw;
                 }
             }
 
-            await Task.WhenAll(clientTasks);
+            await Task.WhenAll(clientTasks).ConfigureAwait(false);
             DisposeClientSlotsIfSafe();
         }
 
@@ -354,7 +356,7 @@ namespace CSharpServer.Network
             Interlocked.Increment(ref activeClientCount);
             try
             {
-                await clientHandler(client, cancellationToken);
+                await clientHandler(client, cancellationToken).ConfigureAwait(false);
             }
             finally
             {
@@ -370,7 +372,7 @@ namespace CSharpServer.Network
             Interlocked.Increment(ref waitingClientSlotCount);
             try
             {
-                await clientSlots.WaitAsync(cancellationToken);
+                await clientSlots.WaitAsync(cancellationToken).ConfigureAwait(false);
             }
             finally
             {
@@ -409,7 +411,7 @@ namespace CSharpServer.Network
         {
             try
             {
-                await Task.WhenAll(clientTasks);
+                await Task.WhenAll(clientTasks).ConfigureAwait(false);
             }
             catch
             {
