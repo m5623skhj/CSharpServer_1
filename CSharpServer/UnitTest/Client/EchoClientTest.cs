@@ -387,6 +387,72 @@ namespace UnitTest.Client
         }
 
         [Fact]
+        public async Task SendEchoRequestAsync_WithStream_PropagatesCallerCancellationAndClosesStream()
+        {
+            using var stream = new WaitingReadStream();
+            using var cancellation = new CancellationTokenSource();
+            var client = new EchoClient();
+            var requestTask = client.SendEchoRequestAsync(
+                stream,
+                "hello",
+                cancellation.Token);
+
+            await cancellation.CancelAsync();
+
+            var exception = await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+                requestTask);
+            Assert.Equal(cancellation.Token, exception.CancellationToken);
+            Assert.Equal(
+                PacketEncoder.Encode(Encoding.UTF8.GetBytes("hello")),
+                stream.WrittenData);
+            Assert.True(stream.IsDisposed);
+        }
+
+        [Fact]
+        public async Task SendEchoRequestAsync_WithStreamAndCallerToken_ReturnsResponseWithoutClosingStream()
+        {
+            var encodedResponse = PacketEncoder.Encode(Encoding.UTF8.GetBytes("world"));
+            using var stream = new ScriptedStream(encodedResponse);
+            using var cancellation = new CancellationTokenSource();
+            var client = new EchoClient();
+
+            var response = await client.SendEchoRequestAsync(
+                stream,
+                "hello",
+                cancellation.Token);
+
+            Assert.Equal("world", response);
+            Assert.Equal(
+                PacketEncoder.Encode(Encoding.UTF8.GetBytes("hello")),
+                stream.WrittenData);
+            Assert.False(stream.IsDisposed);
+        }
+
+        [Fact]
+        public async Task SendEchoRequestAsync_WithStream_PreservesCallerCancellationWhenCloseFails()
+        {
+            var stream = new WaitingReadStream(throwOnDispose: true);
+            using var cancellation = new CancellationTokenSource();
+            var client = new EchoClient();
+            var requestTask = client.SendEchoRequestAsync(
+                stream,
+                "hello",
+                cancellation.Token);
+
+            await cancellation.CancelAsync();
+
+            var exception = await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+                requestTask);
+            Assert.Equal(cancellation.Token, exception.CancellationToken);
+            var innerException = Assert.IsType<AggregateException>(exception.InnerException);
+            Assert.Collection(
+                innerException.InnerExceptions,
+                item => Assert.IsAssignableFrom<OperationCanceledException>(item),
+                item => Assert.IsType<IOException>(item));
+            Assert.True(stream.IsDisposed);
+        }
+
+        [Fact]
         public async Task SendEchoRequestAsync_PreservesTimeoutException_WhenStreamCloseThrows()
         {
             var stream = new WaitingReadStream(throwOnDispose: true);

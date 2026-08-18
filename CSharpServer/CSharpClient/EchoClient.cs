@@ -91,12 +91,37 @@ public sealed class EchoClient
 
         using var cancellationTokenSource = new CancellationTokenSource(requestTimeout);
 
+        return await SendEchoRequestAsync(
+            stream,
+            message,
+            cancellationTokenSource.Token,
+            translateCancellationToTimeout: true).ConfigureAwait(false);
+    }
+
+    public async Task<string> SendEchoRequestAsync(
+        Stream stream,
+        string message,
+        CancellationToken cancellationToken)
+    {
+        return await SendEchoRequestAsync(
+            stream,
+            message,
+            cancellationToken,
+            translateCancellationToTimeout: false).ConfigureAwait(false);
+    }
+
+    private static async Task<string> SendEchoRequestAsync(
+        Stream stream,
+        string message,
+        CancellationToken cancellationToken,
+        bool translateCancellationToTimeout)
+    {
         try
         {
             return await SendEchoRequestAsyncCore(
                 stream,
                 message,
-                cancellationTokenSource.Token).ConfigureAwait(false);
+                cancellationToken).ConfigureAwait(false);
         }
         catch (EndOfStreamException exception)
         {
@@ -144,7 +169,7 @@ public sealed class EchoClient
             throw;
         }
         catch (OperationCanceledException exception)
-            when (cancellationTokenSource.IsCancellationRequested)
+            when (cancellationToken.IsCancellationRequested)
         {
             try
             {
@@ -152,11 +177,26 @@ public sealed class EchoClient
             }
             catch (Exception closeException)
             {
-                throw CreateTimeoutException(
-                    new AggregateException(exception, closeException));
+                var combinedException = new AggregateException(
+                    exception,
+                    closeException);
+                if (translateCancellationToTimeout)
+                {
+                    throw CreateTimeoutException(combinedException);
+                }
+
+                throw new OperationCanceledException(
+                    exception.Message,
+                    combinedException,
+                    cancellationToken);
             }
 
-            throw CreateTimeoutException(exception);
+            if (translateCancellationToTimeout)
+            {
+                throw CreateTimeoutException(exception);
+            }
+
+            throw;
         }
     }
 

@@ -93,6 +93,15 @@ Sends a length-prefixed echo request and reads one length-prefixed response.
 - Preserves `TimeoutException` as the primary failure if closing the supplied stream also fails, while retaining both underlying exceptions.
 - Returns the response as a UTF-8 string and rejects invalid UTF-8 payload bytes as a protocol error.
 
+### `SendEchoRequestAsync(Stream stream, string message, CancellationToken cancellationToken)`
+
+- Rejects a null stream or message before writing the request.
+- Rejects oversized or invalid UTF-8 request strings before writing request bytes.
+- Passes caller cancellation through request write, flush, and response reads.
+- Propagates `OperationCanceledException` with the caller token instead of translating it to `TimeoutException`.
+- Closes the caller-owned stream after cancellation because a partial request or late response cannot be safely correlated with a later request.
+- Preserves cancellation as the primary failure if stream cleanup also fails, retaining both the cancellation and close failures in an inner `AggregateException`.
+
 ## Message Boundaries
 
 Empty messages are valid and are encoded as header-only packets. Messages whose UTF-8 representation is exactly `ProtocolLimits.MaxPayloadLength` bytes are also valid; only larger messages are rejected.
@@ -118,6 +127,8 @@ Timeout values up to `UInt32.MaxValue - 1` milliseconds are supported; larger va
 If caller-owned stream cleanup also fails after timeout, the `TimeoutException` contains an `AggregateException` with both the original cancellation and close failure.
 
 Caller-owned streams must be treated as unusable after a request timeout. The client closes them to enforce this protocol boundary.
+
+Caller-requested cancellation during a stream request follows the same unusable-stream rule, but remains an `OperationCanceledException` associated with the caller token rather than becoming a timeout.
 
 Async internals avoid synchronization-context capture so synchronous wrappers do not deadlock UI or test contexts.
 
