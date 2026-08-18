@@ -34,7 +34,7 @@ Repeatedly calls `ReadOnce()` until EOF.
 
 ### `ReadUntilEndAsync(CancellationToken cancellationToken)`
 
-Repeatedly awaits `StreamConnectionReader.ReadOnceAsync` until EOF and propagates cancellation.
+Repeatedly awaits `StreamConnectionReader.ReadOnceAsync` until EOF and propagates cancellation. The read loop does not capture a caller synchronization context.
 
 ### `ReadUntilEndAsync(CancellationToken cancellationToken, TimeSpan idleTimeout)`
 
@@ -45,6 +45,7 @@ Repeatedly awaits `StreamConnectionReader.ReadOnceAsync` until EOF and propagate
 - Continues to propagate caller-requested cancellation during reads and handlers.
 - Accepts idle timeouts up to `UInt32.MaxValue - 1` milliseconds.
 - Rejects zero, negative, or .NET timer-limit-exceeding idle timeouts before reading.
+- Does not capture a caller synchronization context between reads.
 
 ### `Send(byte[] payload)`
 

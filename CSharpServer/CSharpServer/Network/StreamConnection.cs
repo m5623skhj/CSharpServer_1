@@ -67,7 +67,7 @@ namespace CSharpServer.Network
 
         public async Task ReadUntilEndAsync(CancellationToken cancellationToken)
         {
-            while (await reader.ReadOnceAsync(cancellationToken))
+            while (await reader.ReadOnceAsync(cancellationToken).ConfigureAwait(false))
             {
             }
         }
@@ -81,7 +81,8 @@ namespace CSharpServer.Network
                 throw new ArgumentOutOfRangeException(nameof(idleTimeout));
             }
 
-            while (await reader.ReadOnceAsync(cancellationToken, idleTimeout))
+            while (await reader.ReadOnceAsync(cancellationToken, idleTimeout)
+                .ConfigureAwait(false))
             {
             }
         }

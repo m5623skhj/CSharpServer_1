@@ -84,6 +84,7 @@ The network layer adapts byte streams and TCP connections into packet sessions.
 - `StreamConnection` sync and async send paths reject null payloads, encode them, and preserve caller cancellation for asynchronous writes and flushes.
 - Concurrent echo processing propagates cancellation through packet handlers and async stream writes.
 - `StreamConnection` composes stream reader, transport, and connection.
+- `StreamConnection` avoids synchronization-context capture while repeating normal and idle-timeout asynchronous reads.
 - `StreamConnection` rejects null streams and packet handlers plus non-positive buffer sizes before composition.
 - `ServerOptions` validates executable arguments before listener startup.
 - `ServerOptions` rejects null argument arrays before reading parser state.

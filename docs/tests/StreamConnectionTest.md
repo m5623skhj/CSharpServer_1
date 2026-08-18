@@ -26,6 +26,14 @@ Test-only stream that keeps an asynchronous read pending until cancellation.
 
 Test-only stream that rejects synchronous writes and records asynchronous write data and cancellation.
 
+### `QueueingSynchronizationContext`
+
+Test-only synchronization context that queues posted continuations so context capture can be detected deterministically.
+
+### `AsynchronouslyCompletingEofStream`
+
+Test-only stream whose EOF completion is controlled independently by the test.
+
 ## Test Coverage
 
 - Construction rejects null streams and packet handlers.
@@ -33,6 +41,7 @@ Test-only stream that rejects synchronous writes and records asynchronous write 
 - `ReadOnce` reads an encoded packet and invokes the payload handler.
 - `ReadUntilEnd` handles packets split across multiple reads.
 - `ReadUntilEndAsync` handles packets split across multiple asynchronous reads.
+- Both asynchronous read-loop overloads complete without posting their continuation to a caller synchronization context.
 - `ReadUntilEndAsync` stops waiting and propagates cancellation.
 - The idle-timeout overload returns normally when a stream read remains idle.
 - The idle-timeout overload still propagates caller-requested cancellation.

@@ -176,6 +176,63 @@ namespace UnitTest.Network
                 TimeSpan.FromMilliseconds(uint.MaxValue - 1));
         }
 
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task ReadUntilEndAsync_DoesNotCaptureSynchronizationContext(
+            bool useIdleTimeout)
+        {
+            using var stream = new AsynchronouslyCompletingEofStream();
+            var context = new QueueingSynchronizationContext();
+            var readStarted = new TaskCompletionSource(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+            var completion = new TaskCompletionSource<Exception?>(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+            var thread = new Thread(() =>
+            {
+                SynchronizationContext.SetSynchronizationContext(context);
+                try
+                {
+                    var connection = new StreamConnection(stream, inBufferSize: 16, _ => { });
+                    var readTask = useIdleTimeout
+                        ? connection.ReadUntilEndAsync(
+                            CancellationToken.None,
+                            TimeSpan.FromSeconds(5))
+                        : connection.ReadUntilEndAsync(CancellationToken.None);
+                    readStarted.TrySetResult();
+                    readTask.GetAwaiter().GetResult();
+                    completion.TrySetResult(null);
+                }
+                catch (Exception exception)
+                {
+                    completion.TrySetResult(exception);
+                }
+            })
+            {
+                IsBackground = true
+            };
+
+            thread.Start();
+            try
+            {
+                await readStarted.Task.WaitAsync(TimeSpan.FromSeconds(1));
+                stream.CompleteRead();
+
+                var completedTask = await Task.WhenAny(
+                        completion.Task,
+                        context.ContinuationPosted.Task)
+                    .WaitAsync(TimeSpan.FromSeconds(1));
+
+                Assert.Same(completion.Task, completedTask);
+                Assert.Null(await completion.Task);
+            }
+            finally
+            {
+                context.RunQueuedCallbacks();
+                Assert.True(thread.Join(TimeSpan.FromSeconds(1)));
+            }
+        }
+
         [Fact]
         public void ReadOnce_WritesEchoPacketToStream_WhenEchoHandlerIsUsed()
         {
@@ -319,6 +376,95 @@ namespace UnitTest.Network
                 ReadStarted.TrySetResult();
                 await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
                 return 0;
+            }
+
+            public override long Seek(long offset, SeekOrigin origin)
+            {
+                throw new NotSupportedException();
+            }
+
+            public override void SetLength(long value)
+            {
+                throw new NotSupportedException();
+            }
+
+            public override void Write(byte[] buffer, int offset, int count)
+            {
+                throw new NotSupportedException();
+            }
+        }
+
+        private sealed class QueueingSynchronizationContext : SynchronizationContext
+        {
+            private readonly Queue<(SendOrPostCallback Callback, object? State)> callbacks = [];
+            private readonly object callbacksLock = new();
+
+            public TaskCompletionSource ContinuationPosted { get; } = new(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+
+            public override void Post(SendOrPostCallback callback, object? state)
+            {
+                lock (callbacksLock)
+                {
+                    callbacks.Enqueue((callback, state));
+                }
+
+                ContinuationPosted.TrySetResult();
+            }
+
+            public void RunQueuedCallbacks()
+            {
+                while (true)
+                {
+                    (SendOrPostCallback Callback, object? State) callback;
+                    lock (callbacksLock)
+                    {
+                        if (!callbacks.TryDequeue(out callback))
+                        {
+                            return;
+                        }
+                    }
+
+                    callback.Callback(callback.State);
+                }
+            }
+        }
+
+        private sealed class AsynchronouslyCompletingEofStream : Stream
+        {
+            private readonly TaskCompletionSource<int> readCompletion = new(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+
+            public override bool CanRead => true;
+            public override bool CanSeek => false;
+            public override bool CanWrite => false;
+            public override long Length => throw new NotSupportedException();
+
+            public override long Position
+            {
+                get => throw new NotSupportedException();
+                set => throw new NotSupportedException();
+            }
+
+            public void CompleteRead()
+            {
+                readCompletion.TrySetResult(0);
+            }
+
+            public override void Flush()
+            {
+            }
+
+            public override int Read(byte[] buffer, int offset, int count)
+            {
+                throw new NotSupportedException();
+            }
+
+            public override ValueTask<int> ReadAsync(
+                Memory<byte> buffer,
+                CancellationToken cancellationToken = default)
+            {
+                return new ValueTask<int>(readCompletion.Task.WaitAsync(cancellationToken));
             }
 
             public override long Seek(long offset, SeekOrigin origin)
