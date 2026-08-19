@@ -103,6 +103,11 @@ public sealed class EchoClient
         string message,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(stream);
+        ArgumentNullException.ThrowIfNull(message);
+        ValidateMessageSize(message);
+        cancellationToken.ThrowIfCancellationRequested();
+
         return await SendEchoRequestAsync(
             stream,
             message,

@@ -97,6 +97,7 @@ Sends a length-prefixed echo request and reads one length-prefixed response.
 
 - Rejects a null stream or message before writing the request.
 - Rejects oversized or invalid UTF-8 request strings before writing request bytes.
+- Rejects an already canceled caller token before writing bytes and leaves the untouched stream open.
 - Passes caller cancellation through request write, flush, and response reads.
 - Propagates `OperationCanceledException` with the caller token instead of translating it to `TimeoutException`.
 - Closes the caller-owned stream after cancellation because a partial request or late response cannot be safely correlated with a later request.

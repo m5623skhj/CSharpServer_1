@@ -409,6 +409,25 @@ namespace UnitTest.Client
         }
 
         [Fact]
+        public async Task SendEchoRequestAsync_WithStream_DoesNotStartRequestWhenCallerTokenIsAlreadyCanceled()
+        {
+            using var stream = new WaitingReadStream();
+            using var cancellation = new CancellationTokenSource();
+            await cancellation.CancelAsync();
+            var client = new EchoClient();
+
+            var exception = await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+                client.SendEchoRequestAsync(
+                    stream,
+                    "hello",
+                    cancellation.Token));
+
+            Assert.Equal(cancellation.Token, exception.CancellationToken);
+            Assert.Empty(stream.WrittenData);
+            Assert.False(stream.IsDisposed);
+        }
+
+        [Fact]
         public async Task SendEchoRequestAsync_WithStreamAndCallerToken_ReturnsResponseWithoutClosingStream()
         {
             var encodedResponse = PacketEncoder.Encode(Encoding.UTF8.GetBytes("world"));

@@ -53,6 +53,7 @@ Test-only stream that records writes, keeps async reads pending until cancellati
 - A timed-out stream request closes the stream so it cannot be reused with corrupted protocol state.
 - A stream close failure does not replace the request `TimeoutException`; both underlying failures remain available.
 - The caller-cancellation stream overload propagates `OperationCanceledException` with the caller token and closes the stream after cancellation.
+- An already canceled caller token prevents request bytes from being written and leaves the untouched stream open.
 - The caller-cancellation stream overload returns a normal response without closing the stream when cancellation is not requested.
 - A stream close failure does not replace caller cancellation; both underlying failures remain available.
 - The host/port async overload throws `TimeoutException` when a connected server receives the request but does not respond.
