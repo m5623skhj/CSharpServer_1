@@ -48,6 +48,8 @@ Test-only stream that records writes, keeps async reads pending until cancellati
 - Invalid response lengths close caller-owned streams, and close failures do not replace the protocol exception.
 - Request and response I/O failures close caller-owned streams, and close failures do not replace the original `IOException`.
 - The synchronous stream overload throws `TimeoutException` when the request does not complete.
+- The synchronous stream caller-cancellation overload performs no I/O and leaves the stream open when its token is already canceled.
+- The synchronous host/port caller-cancellation overload propagates pre-cancellation with the caller token.
 - `SendEchoRequestAsync` throws `TimeoutException` when the complete request does not finish before the timeout.
 - The async stream overload accepts the .NET timer maximum and rejects larger timeout values before writing.
 - A timed-out stream request closes the stream so it cannot be reused with corrupted protocol state.

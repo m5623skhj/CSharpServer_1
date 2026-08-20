@@ -31,6 +31,18 @@ public sealed class EchoClient
             .GetResult();
     }
 
+    public string SendEchoRequest(
+        string host,
+        int port,
+        string message,
+        CancellationToken cancellationToken)
+    {
+        return SendEchoRequestAsync(host, port, message, cancellationToken)
+            .ConfigureAwait(false)
+            .GetAwaiter()
+            .GetResult();
+    }
+
     public async Task<string> SendEchoRequestAsync(
         string host,
         int port,
@@ -80,6 +92,17 @@ public sealed class EchoClient
     public string SendEchoRequest(Stream stream, string message, TimeSpan requestTimeout)
     {
         return SendEchoRequestAsync(stream, message, requestTimeout)
+            .ConfigureAwait(false)
+            .GetAwaiter()
+            .GetResult();
+    }
+
+    public string SendEchoRequest(
+        Stream stream,
+        string message,
+        CancellationToken cancellationToken)
+    {
+        return SendEchoRequestAsync(stream, message, cancellationToken)
             .ConfigureAwait(false)
             .GetAwaiter()
             .GetResult();

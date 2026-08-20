@@ -370,6 +370,42 @@ namespace UnitTest.Client
         }
 
         [Fact]
+        public void SendEchoRequest_WithStreamAndCallerToken_DoesNotStartRequestWhenTokenIsAlreadyCanceled()
+        {
+            using var stream = new WaitingReadStream();
+            using var cancellation = new CancellationTokenSource();
+            cancellation.Cancel();
+            var client = new EchoClient();
+
+            var exception = Assert.ThrowsAny<OperationCanceledException>(() =>
+                client.SendEchoRequest(
+                    stream,
+                    "hello",
+                    cancellation.Token));
+
+            Assert.Equal(cancellation.Token, exception.CancellationToken);
+            Assert.Empty(stream.WrittenData);
+            Assert.False(stream.IsDisposed);
+        }
+
+        [Fact]
+        public void SendEchoRequest_WithHostAndCallerToken_PropagatesPreCancellation()
+        {
+            using var cancellation = new CancellationTokenSource();
+            cancellation.Cancel();
+            var client = new EchoClient();
+
+            var exception = Assert.ThrowsAny<OperationCanceledException>(() =>
+                client.SendEchoRequest(
+                    "127.0.0.1",
+                    1,
+                    "hello",
+                    cancellation.Token));
+
+            Assert.Equal(cancellation.Token, exception.CancellationToken);
+        }
+
+        [Fact]
         public async Task SendEchoRequestAsync_ThrowsTimeoutException_WhenRequestDoesNotCompleteBeforeTimeout()
         {
             using var stream = new WaitingReadStream();

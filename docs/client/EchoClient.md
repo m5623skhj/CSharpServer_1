@@ -35,6 +35,13 @@ Sends a length-prefixed echo request and reads one length-prefixed response.
 - Rejects messages larger than `ProtocolLimits.MaxPayloadLength` when encoded as UTF-8 before opening a connection.
 - Rejects strings that cannot be encoded as valid UTF-8 before opening a connection.
 
+### `SendEchoRequest(string host, int port, string message, CancellationToken cancellationToken)`
+
+- Executes the async host/port cancellation path synchronously.
+- Applies caller cancellation to TCP connect, request write, and response read.
+- Propagates `OperationCanceledException` with the caller token without wrapping it in `AggregateException`.
+- Performs the same host, port, and message validation as the asynchronous overload before network work begins.
+
 ### `SendEchoRequest(Stream stream, string message)`
 
 - Executes the async stream path synchronously with a five-second default timeout.
@@ -49,6 +56,14 @@ Sends a length-prefixed echo request and reads one length-prefixed response.
 - Rejects messages larger than `ProtocolLimits.MaxPayloadLength` when encoded as UTF-8 before allocating the payload.
 - Rejects strings that cannot be encoded as valid UTF-8 before writing request bytes.
 - Returns the decoded response or throws `TimeoutException` when the request does not complete.
+
+### `SendEchoRequest(Stream stream, string message, CancellationToken cancellationToken)`
+
+- Executes the async stream cancellation path synchronously.
+- Rejects an already canceled caller token before writing request bytes and leaves the untouched stream open.
+- Applies caller cancellation to request write, flush, and response reads.
+- Propagates `OperationCanceledException` with the caller token without wrapping it in `AggregateException`.
+- Closes the caller-owned stream after cancellation once the request has started because its framing can no longer be safely reused.
 
 ### `SendEchoRequestAsync(string host, int port, string message, TimeSpan requestTimeout)`
 

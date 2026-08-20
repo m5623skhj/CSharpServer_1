@@ -145,7 +145,7 @@ The client currently exists as a test and manual verification tool.
 - Invalid response lengths close caller-supplied streams because packet framing can no longer be safely reused.
 - Request or response I/O failures close caller-supplied streams because partial packet state may remain.
 - A timeout on a caller-supplied stream closes that stream because the request/response framing can no longer be safely reused.
-- Synchronous client methods reuse the async request path with a default or caller-supplied timeout.
+- Synchronous client methods reuse the async request path with a default timeout, caller-supplied timeout, or caller cancellation token.
 
 ## Process Error Boundaries
 
