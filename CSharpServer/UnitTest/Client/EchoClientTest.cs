@@ -508,6 +508,84 @@ namespace UnitTest.Client
         }
 
         [Fact]
+        public async Task SendEchoRequestAsync_WithStream_ClosesStreamWhenReadIsCanceledIndependently()
+        {
+            using var independentCancellation = new CancellationTokenSource();
+            await independentCancellation.CancelAsync();
+            var expectedException = new OperationCanceledException(
+                independentCancellation.Token);
+            using var stream = new ScriptedStream(
+                [],
+                readException: expectedException);
+            using var callerCancellation = new CancellationTokenSource();
+            var client = new EchoClient();
+
+            var exception = await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+                client.SendEchoRequestAsync(
+                    stream,
+                    "hello",
+                    callerCancellation.Token));
+
+            Assert.Same(expectedException, exception);
+            Assert.Equal(independentCancellation.Token, exception.CancellationToken);
+            Assert.False(callerCancellation.IsCancellationRequested);
+            Assert.True(stream.IsDisposed);
+        }
+
+        [Fact]
+        public async Task SendEchoRequestAsync_WithTimeout_PreservesIndependentStreamCancellation()
+        {
+            using var independentCancellation = new CancellationTokenSource();
+            await independentCancellation.CancelAsync();
+            var expectedException = new OperationCanceledException(
+                independentCancellation.Token);
+            using var stream = new ScriptedStream(
+                [],
+                readException: expectedException);
+            var client = new EchoClient();
+
+            var exception = await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+                client.SendEchoRequestAsync(
+                    stream,
+                    "hello",
+                    TimeSpan.FromSeconds(10)));
+
+            Assert.Same(expectedException, exception);
+            Assert.Equal(independentCancellation.Token, exception.CancellationToken);
+            Assert.True(stream.IsDisposed);
+        }
+
+        [Fact]
+        public async Task SendEchoRequestAsync_WithStream_PreservesIndependentCancellationWhenCloseFails()
+        {
+            using var independentCancellation = new CancellationTokenSource();
+            await independentCancellation.CancelAsync();
+            var expectedException = new OperationCanceledException(
+                independentCancellation.Token);
+            var stream = new ScriptedStream(
+                [],
+                throwOnDispose: true,
+                readException: expectedException);
+            using var callerCancellation = new CancellationTokenSource();
+            var client = new EchoClient();
+
+            var exception = await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+                client.SendEchoRequestAsync(
+                    stream,
+                    "hello",
+                    callerCancellation.Token));
+
+            Assert.Equal(independentCancellation.Token, exception.CancellationToken);
+            Assert.False(callerCancellation.IsCancellationRequested);
+            var innerException = Assert.IsType<AggregateException>(exception.InnerException);
+            Assert.Collection(
+                innerException.InnerExceptions,
+                item => Assert.Same(expectedException, item),
+                item => Assert.IsType<IOException>(item));
+            Assert.True(stream.IsDisposed);
+        }
+
+        [Fact]
         public async Task SendEchoRequestAsync_PreservesTimeoutException_WhenStreamCloseThrows()
         {
             var stream = new WaitingReadStream(throwOnDispose: true);
@@ -630,7 +708,7 @@ namespace UnitTest.Client
             private readonly MemoryStream readStream;
             private readonly MemoryStream writeStream = new();
             private readonly bool throwOnDispose;
-            private readonly IOException? readException;
+            private readonly Exception? readException;
             private readonly IOException? writeException;
             private readonly int? maxReadSize;
             private readonly bool requireFlushBeforeRead;
@@ -639,7 +717,7 @@ namespace UnitTest.Client
             public ScriptedStream(
                 byte[] readData,
                 bool throwOnDispose = false,
-                IOException? readException = null,
+                Exception? readException = null,
                 IOException? writeException = null,
                 int? maxReadSize = null,
                 bool requireFlushBeforeRead = false)

@@ -101,6 +101,7 @@ Sends a length-prefixed echo request and reads one length-prefixed response.
 - Closes the supplied stream when EOF arrives before a complete response packet.
 - Closes the supplied stream when an invalid packet length makes response framing unusable.
 - Closes the supplied stream when request or response I/O fails after the operation begins.
+- Closes the supplied stream when its I/O reports cancellation after the operation begins, even when that cancellation did not originate from the request timeout token.
 - Closes the supplied stream after timeout because a partial or late response cannot be safely correlated with a later request.
 - Preserves `EndOfStreamException` as the primary failure if closing the supplied stream after an incomplete response also fails.
 - Preserves `InvalidDataException` as the primary failure if closing the supplied stream after a protocol error also fails.
@@ -116,6 +117,7 @@ Sends a length-prefixed echo request and reads one length-prefixed response.
 - Passes caller cancellation through request write, flush, and response reads.
 - Propagates `OperationCanceledException` with the caller token instead of translating it to `TimeoutException`.
 - Closes the caller-owned stream after cancellation because a partial request or late response cannot be safely correlated with a later request.
+- Preserves an independent stream cancellation and its token when I/O is canceled without the caller token being requested.
 - Preserves cancellation as the primary failure if stream cleanup also fails, retaining both the cancellation and close failures in an inner `AggregateException`.
 
 ## Message Boundaries
@@ -145,6 +147,8 @@ If caller-owned stream cleanup also fails after timeout, the `TimeoutException` 
 Caller-owned streams must be treated as unusable after a request timeout. The client closes them to enforce this protocol boundary.
 
 Caller-requested cancellation during a stream request follows the same unusable-stream rule, but remains an `OperationCanceledException` associated with the caller token rather than becoming a timeout.
+
+Cancellation reported independently by caller-owned stream I/O after a request starts also closes the stream. It remains an `OperationCanceledException` associated with the stream's cancellation token and is translated to `TimeoutException` only when the request timeout token has actually expired. If cleanup also fails, both failures remain available through an inner `AggregateException`.
 
 Async internals avoid synchronization-context capture so synchronous wrappers do not deadlock UI or test contexts.
 

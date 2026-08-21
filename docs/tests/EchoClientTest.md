@@ -58,5 +58,8 @@ Test-only stream that records writes, keeps async reads pending until cancellati
 - An already canceled caller token prevents request bytes from being written and leaves the untouched stream open.
 - The caller-cancellation stream overload returns a normal response without closing the stream when cancellation is not requested.
 - A stream close failure does not replace caller cancellation; both underlying failures remain available.
+- Cancellation raised independently by stream I/O closes the stream while preserving the independent cancellation token.
+- The timeout overload does not translate independent stream cancellation when its own timeout has not expired.
+- A close failure after independent stream cancellation preserves both failures under the cancellation exception.
 - The host/port async overload throws `TimeoutException` when a connected server receives the request but does not respond.
 - The host/port cancellation overload propagates cancellation during TCP connection.

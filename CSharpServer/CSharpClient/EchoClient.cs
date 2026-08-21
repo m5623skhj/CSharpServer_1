@@ -197,7 +197,6 @@ public sealed class EchoClient
             throw;
         }
         catch (OperationCanceledException exception)
-            when (cancellationToken.IsCancellationRequested)
         {
             try
             {
@@ -208,18 +207,26 @@ public sealed class EchoClient
                 var combinedException = new AggregateException(
                     exception,
                     closeException);
-                if (translateCancellationToTimeout)
+                if (translateCancellationToTimeout
+                    && cancellationToken.IsCancellationRequested)
                 {
                     throw CreateTimeoutException(combinedException);
                 }
 
+                var propagatedCancellationToken = exception.CancellationToken;
+                if (!propagatedCancellationToken.CanBeCanceled
+                    && cancellationToken.IsCancellationRequested)
+                {
+                    propagatedCancellationToken = cancellationToken;
+                }
                 throw new OperationCanceledException(
                     exception.Message,
                     combinedException,
-                    cancellationToken);
+                    propagatedCancellationToken);
             }
 
-            if (translateCancellationToTimeout)
+            if (translateCancellationToTimeout
+                && cancellationToken.IsCancellationRequested)
             {
                 throw CreateTimeoutException(exception);
             }

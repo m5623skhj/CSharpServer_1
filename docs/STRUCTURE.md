@@ -131,7 +131,7 @@ The client currently exists as a test and manual verification tool.
 - Client `Program` prints validation errors, sends a request, and converts expected network or protocol failures into exit code `1`.
 - `EchoClient` connects to a TCP server, writes and flushes an encoded echo request, waits for one encoded response, and decodes it.
 - `EchoClient` applies timeout or caller cancellation across TCP connect, request write, and response read.
-- Caller-owned stream requests support explicit caller cancellation, close the stream after mid-frame cancellation, and preserve the caller token.
+- Caller-owned stream requests close the stream after any cancellation observed once I/O begins and preserve whether cancellation came from the caller, timeout, or stream itself.
 - Pre-canceled caller-owned stream requests perform no I/O and leave the stream open.
 - `EchoClient` rejects null host, stream, and message arguments at the public API boundary before network or stream work begins.
 - `EchoClient` rejects empty or whitespace-only hosts before network work begins, matching `ClientOptions`.
