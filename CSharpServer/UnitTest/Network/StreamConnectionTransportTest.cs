@@ -72,6 +72,66 @@ namespace UnitTest.Network
             await cancellationTokenSource.CancelAsync();
 
             await Assert.ThrowsAnyAsync<OperationCanceledException>(() => sendTask);
+            Assert.True(stream.IsDisposed);
+            Assert.Equal(1, transport.AvailableSendSlotCount);
+            await Assert.ThrowsAsync<ObjectDisposedException>(() =>
+                transport.SendAsync(
+                    new byte[] { 0x02 },
+                    CancellationToken.None).AsTask());
+        }
+
+        [Fact]
+        public async Task SendAsync_PreservesCancellation_WhenClosingCanceledWriteFails()
+        {
+            var stream = new CancellationAwareWriteStream(throwOnDispose: true);
+            var transport = new StreamConnectionTransport(stream);
+            using var cancellationTokenSource = new CancellationTokenSource();
+            var sendTask = transport.SendAsync(
+                new byte[] { 0x01 },
+                cancellationTokenSource.Token).AsTask();
+
+            await stream.WriteStarted.Task.WaitAsync(TimeSpan.FromSeconds(1));
+            await cancellationTokenSource.CancelAsync();
+
+            var exception = await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+                sendTask);
+            Assert.Equal(cancellationTokenSource.Token, exception.CancellationToken);
+            var innerException = Assert.IsType<AggregateException>(exception.InnerException);
+            Assert.Collection(
+                innerException.InnerExceptions,
+                item => Assert.IsAssignableFrom<OperationCanceledException>(item),
+                item => Assert.IsType<IOException>(item));
+            Assert.True(stream.IsDisposed);
+            Assert.Equal(1, transport.AvailableSendSlotCount);
+        }
+
+        [Fact]
+        public async Task SendAsync_DoesNotCloseStream_WhenCanceledWhileWaitingForSendSlot()
+        {
+            using var stream = new ConcurrentAsyncWriteStream();
+            var transport = new StreamConnectionTransport(stream);
+            var firstSend = transport.SendAsync(
+                new byte[] { 0x01 },
+                CancellationToken.None).AsTask();
+
+            await stream.FirstWriteStarted.Task.WaitAsync(TimeSpan.FromSeconds(1));
+            using var cancellationTokenSource = new CancellationTokenSource();
+            var waitingSend = transport.SendAsync(
+                new byte[] { 0x02 },
+                cancellationTokenSource.Token).AsTask();
+            await cancellationTokenSource.CancelAsync();
+
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => waitingSend);
+            Assert.False(stream.IsDisposed);
+
+            stream.AllowFirstWriteToComplete.TrySetResult();
+            await firstSend;
+            await transport.SendAsync(
+                new byte[] { 0x03 },
+                CancellationToken.None);
+
+            Assert.False(stream.IsDisposed);
+            Assert.Equal(1, transport.AvailableSendSlotCount);
         }
 
         [Fact]
@@ -367,8 +427,16 @@ namespace UnitTest.Network
 
         private sealed class CancellationAwareWriteStream : Stream
         {
+            private readonly bool throwOnDispose;
+
+            public CancellationAwareWriteStream(bool throwOnDispose = false)
+            {
+                this.throwOnDispose = throwOnDispose;
+            }
+
             public TaskCompletionSource WriteStarted { get; } = new(
                 TaskCreationOptions.RunContinuationsAsynchronously);
+            public bool IsDisposed { get; private set; }
 
             public override bool CanRead => false;
             public override bool CanSeek => false;
@@ -402,6 +470,20 @@ namespace UnitTest.Network
                 WriteStarted.TrySetResult();
                 await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
             }
+
+            protected override void Dispose(bool disposing)
+            {
+                if (disposing)
+                {
+                    IsDisposed = true;
+                }
+
+                base.Dispose(disposing);
+                if (disposing && throwOnDispose)
+                {
+                    throw new IOException("close failed");
+                }
+            }
         }
 
         private sealed class ConcurrentAsyncWriteStream : Stream
@@ -414,6 +496,7 @@ namespace UnitTest.Network
             public TaskCompletionSource AllowFirstWriteToComplete { get; } = new(
                 TaskCreationOptions.RunContinuationsAsynchronously);
             public bool HadOverlappingWrites { get; private set; }
+            public bool IsDisposed { get; private set; }
 
             public override bool CanRead => false;
             public override bool CanSeek => false;
@@ -461,6 +544,16 @@ namespace UnitTest.Network
                 {
                     Interlocked.Decrement(ref activeWriteCount);
                 }
+            }
+
+            protected override void Dispose(bool disposing)
+            {
+                if (disposing)
+                {
+                    IsDisposed = true;
+                }
+
+                base.Dispose(disposing);
             }
         }
     }

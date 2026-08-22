@@ -44,6 +44,29 @@ namespace CSharpServer.Network
                 await stream.WriteAsync(data, cancellationToken).ConfigureAwait(false);
                 await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
             }
+            catch (OperationCanceledException exception)
+            {
+                try
+                {
+                    Close();
+                }
+                catch (Exception closeException)
+                {
+                    var propagatedCancellationToken = exception.CancellationToken;
+                    if (!propagatedCancellationToken.CanBeCanceled
+                        && cancellationToken.IsCancellationRequested)
+                    {
+                        propagatedCancellationToken = cancellationToken;
+                    }
+
+                    throw new OperationCanceledException(
+                        exception.Message,
+                        new AggregateException(exception, closeException),
+                        propagatedCancellationToken);
+                }
+
+                throw;
+            }
             finally
             {
                 sendSemaphore.Release();
