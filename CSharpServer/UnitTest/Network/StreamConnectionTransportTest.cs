@@ -59,6 +59,46 @@ namespace UnitTest.Network
         }
 
         [Fact]
+        public void Send_ClosesTransport_WhenWriteThrowsIOException()
+        {
+            var expectedException = new IOException("write failed");
+            using var stream = new FailingWriteStream(expectedException);
+            var transport = new StreamConnectionTransport(stream);
+
+            var exception = Assert.Throws<IOException>(() =>
+                transport.Send([0x01]));
+
+            Assert.Same(expectedException, exception);
+            Assert.True(stream.IsDisposed);
+            Assert.Equal(1, transport.AvailableSendSlotCount);
+            Assert.Throws<ObjectDisposedException>(() =>
+                transport.Send([0x02]));
+        }
+
+        [Fact]
+        public void Send_PreservesIOException_WhenClosingFailedWriteFails()
+        {
+            var expectedException = new IOException("write failed");
+            var stream = new FailingWriteStream(
+                expectedException,
+                throwOnDispose: true);
+            var transport = new StreamConnectionTransport(stream);
+
+            var exception = Assert.Throws<IOException>(() =>
+                transport.Send([0x01]));
+
+            var innerException = Assert.IsType<AggregateException>(exception.InnerException);
+            Assert.Collection(
+                innerException.InnerExceptions,
+                item => Assert.Same(expectedException, item),
+                item => Assert.IsType<IOException>(item));
+            Assert.True(stream.IsDisposed);
+            Assert.Equal(1, transport.AvailableSendSlotCount);
+            Assert.Throws<ObjectDisposedException>(() =>
+                transport.Send([0x02]));
+        }
+
+        [Fact]
         public async Task SendAsync_PropagatesCancellationToStreamWrite()
         {
             using var stream = new CancellationAwareWriteStream();
@@ -211,6 +251,54 @@ namespace UnitTest.Network
         }
 
         [Fact]
+        public async Task SendAsync_ClosesTransport_WhenWriteThrowsIOException()
+        {
+            var expectedException = new IOException("write failed");
+            using var stream = new FailingWriteStream(expectedException);
+            var transport = new StreamConnectionTransport(stream);
+
+            var exception = await Assert.ThrowsAsync<IOException>(() =>
+                transport.SendAsync(
+                    new byte[] { 0x01 },
+                    CancellationToken.None).AsTask());
+
+            Assert.Same(expectedException, exception);
+            Assert.True(stream.IsDisposed);
+            Assert.Equal(1, transport.AvailableSendSlotCount);
+            await Assert.ThrowsAsync<ObjectDisposedException>(() =>
+                transport.SendAsync(
+                    new byte[] { 0x02 },
+                    CancellationToken.None).AsTask());
+        }
+
+        [Fact]
+        public async Task SendAsync_PreservesIOException_WhenClosingFailedWriteFails()
+        {
+            var expectedException = new IOException("write failed");
+            var stream = new FailingWriteStream(
+                expectedException,
+                throwOnDispose: true);
+            var transport = new StreamConnectionTransport(stream);
+
+            var exception = await Assert.ThrowsAsync<IOException>(() =>
+                transport.SendAsync(
+                    new byte[] { 0x01 },
+                    CancellationToken.None).AsTask());
+
+            var innerException = Assert.IsType<AggregateException>(exception.InnerException);
+            Assert.Collection(
+                innerException.InnerExceptions,
+                item => Assert.Same(expectedException, item),
+                item => Assert.IsType<IOException>(item));
+            Assert.True(stream.IsDisposed);
+            Assert.Equal(1, transport.AvailableSendSlotCount);
+            await Assert.ThrowsAsync<ObjectDisposedException>(() =>
+                transport.SendAsync(
+                    new byte[] { 0x02 },
+                    CancellationToken.None).AsTask());
+        }
+
+        [Fact]
         public async Task SendAsync_SerializesConcurrentWrites()
         {
             using var stream = new ConcurrentAsyncWriteStream();
@@ -314,6 +402,48 @@ namespace UnitTest.Network
                 IsDisposed = true;
                 DisposeCount++;
                 base.Dispose(disposing);
+            }
+        }
+
+        private sealed class FailingWriteStream : MemoryStream
+        {
+            private readonly IOException writeException;
+            private readonly bool throwOnDispose;
+
+            public FailingWriteStream(
+                IOException writeException,
+                bool throwOnDispose = false)
+            {
+                this.writeException = writeException;
+                this.throwOnDispose = throwOnDispose;
+            }
+
+            public bool IsDisposed { get; private set; }
+
+            public override void Write(ReadOnlySpan<byte> buffer)
+            {
+                throw writeException;
+            }
+
+            public override ValueTask WriteAsync(
+                ReadOnlyMemory<byte> buffer,
+                CancellationToken cancellationToken = default)
+            {
+                return ValueTask.FromException(writeException);
+            }
+
+            protected override void Dispose(bool disposing)
+            {
+                if (disposing)
+                {
+                    IsDisposed = true;
+                }
+
+                base.Dispose(disposing);
+                if (disposing && throwOnDispose)
+                {
+                    throw new IOException("close failed");
+                }
             }
         }
 

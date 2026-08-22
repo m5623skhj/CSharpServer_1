@@ -28,6 +28,8 @@ Concurrent sends are serialized so packet bytes from separate calls cannot overl
 
 Throws `ObjectDisposedException` after the transport has been closed.
 
+Closes the transport when write or flush throws `IOException` because a partial frame may make the connection unsafe to reuse. If closing also fails, the thrown `IOException` retains both failures in an inner `AggregateException`.
+
 ### `SendAsync(ReadOnlyMemory<byte> data, CancellationToken cancellationToken)`
 
 - Waits asynchronously for exclusive send access.
@@ -36,6 +38,7 @@ Throws `ObjectDisposedException` after the transport has been closed.
 - Leaves the stream open when cancellation occurs while waiting for exclusive send access because no frame bytes have been written.
 - Closes the stream when cancellation interrupts an active write or flush because a partial frame may make the connection unsafe to reuse.
 - Preserves cancellation as the primary failure if closing the stream also fails, retaining both failures in an inner `AggregateException`.
+- Closes the transport when write or flush throws `IOException` and preserves both the I/O and close failures if cleanup also fails.
 - Avoids capturing the caller's synchronization context across semaphore, write, and flush waits.
 - Rejects sends after close.
 
@@ -47,7 +50,7 @@ Repeated close calls have no effect.
 
 ## Notes
 
-Sync and async sends share one semaphore, including each frame's flush, so buffered streams expose a complete frame before another send begins. Cancellation while waiting for that semaphore does not affect another active send. Once async I/O starts, cancellation closes the transport before releasing the send slot so later sends cannot append to a partial frame. Close uses a separate state lock so it can close the underlying stream without waiting for an active send. Whether stream disposal immediately interrupts a pending write or flush depends on the concrete `Stream` implementation.
+Sync and async sends share one semaphore, including each frame's flush, so buffered streams expose a complete frame before another send begins. Cancellation while waiting for that semaphore does not affect another active send. Once async I/O starts, cancellation closes the transport before releasing the send slot so later sends cannot append to a partial frame. Sync and async `IOException` failures follow the same unusable-transport rule. Close uses a separate state lock so it can close the underlying stream without waiting for an active send. Whether stream disposal immediately interrupts a pending write or flush depends on the concrete `Stream` implementation.
 
 Async send internals avoid synchronization-context capture so callers that synchronously bridge the returned `ValueTask` do not depend on pumping a UI or single-threaded context.
 

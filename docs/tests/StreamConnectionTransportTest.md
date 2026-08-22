@@ -18,6 +18,10 @@ Verifies `StreamConnectionTransport` write, flush, and close behavior.
 
 Test-only stream that records flushes plus whether and how many times it was disposed.
 
+### `FailingWriteStream`
+
+Test-only stream that throws a configured `IOException` from synchronous and asynchronous writes, records disposal, and can simulate a close failure.
+
 ### `BlockingWriteStream`
 
 Test-only stream that keeps a write active until the test releases it and records close calls.
@@ -45,12 +49,16 @@ Test-only stream that keeps an asynchronous write pending until the test complet
 - `Send` flushes the stream after writing a complete frame.
 - `Send` rejects null byte arrays before writing.
 - `Send` rejects writes after close and returns its send slot after the exception.
+- Sync write `IOException` closes the transport, restores the send slot, and prevents later sends.
+- A close failure after sync write failure preserves both failures under the original I/O error type.
 - `SendAsync` propagates cancellation to an active stream write, closes the transport, and prevents later sends from reusing a potentially partial frame.
 - A close failure after active send cancellation does not replace cancellation; both failures remain available.
 - Cancellation while waiting for the send slot leaves the active stream open and usable after the current send completes.
 - `SendAsync` flushes the stream after writing a complete frame.
 - `SendAsync` completes without posting its continuation to a caller synchronization context.
 - `SendAsync` rejects writes after close and returns its send slot after the exception.
+- Async write `IOException` closes the transport, restores the send slot, and prevents later sends.
+- A close failure after async write failure preserves both failures under the original I/O error type.
 - Concurrent async sends verify semaphore occupancy and non-overlapping writes.
 - `Close` closes the stream.
 - Repeated `Close` calls close the stream only once.

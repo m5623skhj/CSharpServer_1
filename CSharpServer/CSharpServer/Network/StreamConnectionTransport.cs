@@ -27,6 +27,11 @@ namespace CSharpServer.Network
                 stream.Write(data);
                 stream.Flush();
             }
+            catch (IOException exception)
+            {
+                CloseAfterIOException(exception);
+                throw;
+            }
             finally
             {
                 sendSemaphore.Release();
@@ -67,6 +72,11 @@ namespace CSharpServer.Network
 
                 throw;
             }
+            catch (IOException exception)
+            {
+                CloseAfterIOException(exception);
+                throw;
+            }
             finally
             {
                 sendSemaphore.Release();
@@ -84,6 +94,20 @@ namespace CSharpServer.Network
 
                 isClosed = true;
                 stream.Close();
+            }
+        }
+
+        private void CloseAfterIOException(IOException exception)
+        {
+            try
+            {
+                Close();
+            }
+            catch (Exception closeException)
+            {
+                throw new IOException(
+                    exception.Message,
+                    new AggregateException(exception, closeException));
             }
         }
 

@@ -78,6 +78,7 @@ The network layer adapts byte streams and TCP connections into packet sessions.
 - `StreamConnectionReader` reuses one read buffer and passes borrowed memory through the internal pipeline.
 - `StreamConnectionReader` avoids synchronization-context capture across async read-slot, stream-read, and handler waits, including idle-timeout reads.
 - `StreamConnectionTransport` serializes each sync and async frame write through its flush, leaves the connection open when a queued send is canceled before I/O, and closes it when cancellation can leave a partial active frame.
+- Sync and async transport `IOException` failures also close the connection before the send slot is released so later packets cannot reuse a partial frame.
 - `StreamConnectionTransport` avoids synchronization-context capture across async slot, write, and flush waits.
 - `StreamConnectionTransport` rejects a null stream at construction so transport failures fail at the API boundary.
 - `StreamConnectionTransport.Send(byte[])` rejects null byte arrays before stream writes.
