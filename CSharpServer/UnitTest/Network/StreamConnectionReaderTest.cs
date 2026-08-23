@@ -112,6 +112,64 @@ namespace UnitTest.Network
 
             await Assert.ThrowsAnyAsync<OperationCanceledException>(() => readTask);
             Assert.Empty(receivedData);
+            Assert.True(stream.IsDisposed);
+            Assert.Equal(1, reader.AvailableReadSlotCount);
+            await Assert.ThrowsAsync<ObjectDisposedException>(() =>
+                reader.ReadOnceAsync(CancellationToken.None));
+        }
+
+        [Fact]
+        public async Task ReadOnceAsync_PreservesCancellation_WhenClosingCanceledReadFails()
+        {
+            var stream = new CancellationAwareReadStream(throwOnDispose: true);
+            using var cancellationTokenSource = new CancellationTokenSource();
+            var reader = new StreamConnectionReader(
+                stream,
+                inBufferSize: 8,
+                _ => { });
+            var readTask = reader.ReadOnceAsync(cancellationTokenSource.Token);
+
+            await stream.ReadStarted.Task.WaitAsync(TimeSpan.FromSeconds(1));
+            await cancellationTokenSource.CancelAsync();
+
+            var exception = await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+                readTask);
+            Assert.Equal(cancellationTokenSource.Token, exception.CancellationToken);
+            var innerException = Assert.IsType<AggregateException>(exception.InnerException);
+            Assert.Collection(
+                innerException.InnerExceptions,
+                item => Assert.IsAssignableFrom<OperationCanceledException>(item),
+                item => Assert.IsType<IOException>(item));
+            Assert.True(stream.IsDisposed);
+            Assert.Equal(1, reader.AvailableReadSlotCount);
+            await Assert.ThrowsAsync<ObjectDisposedException>(() =>
+                reader.ReadOnceAsync(CancellationToken.None));
+        }
+
+        [Fact]
+        public async Task ReadOnceAsync_DoesNotCloseStream_WhenCanceledWhileWaitingForReadSlot()
+        {
+            using var stream = new ConcurrentAsyncReadTrackingStream();
+            var reader = new StreamConnectionReader(
+                stream,
+                inBufferSize: 8,
+                _ => { });
+            var firstRead = reader.ReadOnceAsync(CancellationToken.None);
+
+            await stream.FirstReadEntered.Task.WaitAsync(TimeSpan.FromSeconds(1));
+            using var cancellationTokenSource = new CancellationTokenSource();
+            var waitingRead = reader.ReadOnceAsync(cancellationTokenSource.Token);
+            await cancellationTokenSource.CancelAsync();
+
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => waitingRead);
+            Assert.False(stream.IsDisposed);
+
+            stream.AllowFirstReadToComplete.TrySetResult();
+            Assert.True(await firstRead);
+            Assert.False(await reader.ReadOnceAsync(CancellationToken.None));
+
+            Assert.False(stream.IsDisposed);
+            Assert.Equal(1, reader.AvailableReadSlotCount);
         }
 
         [Fact]
@@ -303,6 +361,7 @@ namespace UnitTest.Network
             public TaskCompletionSource AllowFirstReadToComplete { get; } = new(
                 TaskCreationOptions.RunContinuationsAsynchronously);
             public bool HadOverlappingReads { get; private set; }
+            public bool IsDisposed { get; private set; }
 
             public override bool CanRead => true;
             public override bool CanSeek => false;
@@ -328,6 +387,7 @@ namespace UnitTest.Network
                 Memory<byte> buffer,
                 CancellationToken cancellationToken = default)
             {
+                ObjectDisposedException.ThrowIf(IsDisposed, this);
                 if (Interlocked.Increment(ref activeReadCount) > 1)
                 {
                     HadOverlappingReads = true;
@@ -365,12 +425,30 @@ namespace UnitTest.Network
             {
                 throw new NotSupportedException();
             }
+
+            protected override void Dispose(bool disposing)
+            {
+                if (disposing)
+                {
+                    IsDisposed = true;
+                }
+
+                base.Dispose(disposing);
+            }
         }
 
         private sealed class CancellationAwareReadStream : Stream
         {
+            private readonly bool throwOnDispose;
+
+            public CancellationAwareReadStream(bool throwOnDispose = false)
+            {
+                this.throwOnDispose = throwOnDispose;
+            }
+
             public TaskCompletionSource ReadStarted { get; } = new(
                 TaskCreationOptions.RunContinuationsAsynchronously);
+            public bool IsDisposed { get; private set; }
 
             public override bool CanRead => true;
             public override bool CanSeek => false;
@@ -396,6 +474,7 @@ namespace UnitTest.Network
                 Memory<byte> buffer,
                 CancellationToken cancellationToken = default)
             {
+                ObjectDisposedException.ThrowIf(IsDisposed, this);
                 ReadStarted.TrySetResult();
                 await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
                 return 0;
@@ -414,6 +493,20 @@ namespace UnitTest.Network
             public override void Write(byte[] buffer, int offset, int count)
             {
                 throw new NotSupportedException();
+            }
+
+            protected override void Dispose(bool disposing)
+            {
+                if (disposing)
+                {
+                    IsDisposed = true;
+                }
+
+                base.Dispose(disposing);
+                if (disposing && throwOnDispose)
+                {
+                    throw new IOException("close failed");
+                }
             }
         }
 

@@ -34,7 +34,7 @@ Repeatedly calls `ReadOnce()` until EOF.
 
 ### `ReadUntilEndAsync(CancellationToken cancellationToken)`
 
-Repeatedly awaits `StreamConnectionReader.ReadOnceAsync` until EOF and propagates cancellation. The read loop does not capture a caller synchronization context.
+Repeatedly awaits `StreamConnectionReader.ReadOnceAsync` until EOF and propagates cancellation. Cancellation during an active read or handler closes the stream and prevents later reads from reusing uncertain packet state. The read loop does not capture a caller synchronization context.
 
 ### `ReadUntilEndAsync(CancellationToken cancellationToken, TimeSpan idleTimeout)`
 

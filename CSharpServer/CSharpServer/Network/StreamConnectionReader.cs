@@ -9,6 +9,7 @@ namespace CSharpServer.Network
         private readonly Action<ReadOnlyMemory<byte>> dataHandler;
         private readonly Func<ReadOnlyMemory<byte>, CancellationToken, ValueTask> asyncDataHandler;
         private readonly SemaphoreSlim readSemaphore = new(1, 1);
+        private int unusableState;
 
         public StreamConnectionReader(
             Stream stream,
@@ -46,8 +47,14 @@ namespace CSharpServer.Network
             readSemaphore.Wait();
             try
             {
+                ThrowIfUnusable();
                 var readCount = stream.Read(buffer);
                 return HandleRead(buffer, readCount);
+            }
+            catch (OperationCanceledException exception)
+            {
+                CloseAfterCancellation(exception, CancellationToken.None);
+                throw;
             }
             finally
             {
@@ -60,6 +67,7 @@ namespace CSharpServer.Network
             await readSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
             try
             {
+                ThrowIfUnusable();
                 var readCount = await stream.ReadAsync(buffer, cancellationToken)
                     .ConfigureAwait(false);
                 if (readCount == 0)
@@ -70,6 +78,11 @@ namespace CSharpServer.Network
                 await asyncDataHandler(buffer.AsMemory(0, readCount), cancellationToken)
                     .ConfigureAwait(false);
                 return true;
+            }
+            catch (OperationCanceledException exception)
+            {
+                CloseAfterCancellation(exception, cancellationToken);
+                throw;
             }
             finally
             {
@@ -89,6 +102,7 @@ namespace CSharpServer.Network
             await readSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
             try
             {
+                ThrowIfUnusable();
                 using var idleCancellation =
                     CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 idleCancellation.CancelAfter(idleTimeout);
@@ -116,10 +130,47 @@ namespace CSharpServer.Network
                     cancellationToken).ConfigureAwait(false);
                 return true;
             }
+            catch (OperationCanceledException exception)
+            {
+                CloseAfterCancellation(exception, cancellationToken);
+                throw;
+            }
             finally
             {
                 readSemaphore.Release();
             }
+        }
+
+        private void CloseAfterCancellation(
+            OperationCanceledException exception,
+            CancellationToken cancellationToken)
+        {
+            Interlocked.Exchange(ref unusableState, 1);
+            try
+            {
+                stream.Close();
+            }
+            catch (Exception closeException)
+            {
+                var propagatedCancellationToken = exception.CancellationToken;
+                if (!propagatedCancellationToken.CanBeCanceled
+                    && cancellationToken.IsCancellationRequested)
+                {
+                    propagatedCancellationToken = cancellationToken;
+                }
+
+                throw new OperationCanceledException(
+                    exception.Message,
+                    new AggregateException(exception, closeException),
+                    propagatedCancellationToken);
+            }
+        }
+
+        private void ThrowIfUnusable()
+        {
+            ObjectDisposedException.ThrowIf(
+                Volatile.Read(ref unusableState) != 0,
+                this);
         }
 
         private bool HandleRead(byte[] readBuffer, int readCount)
