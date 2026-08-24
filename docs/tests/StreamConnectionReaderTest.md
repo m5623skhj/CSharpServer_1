@@ -22,6 +22,14 @@ Test-only async stream that blocks the first read and detects overlapping read c
 
 Test-only stream that waits asynchronously until its read cancellation token is canceled, records disposal, and can simulate a close failure.
 
+### `FailingReadStream`
+
+Test-only stream that throws a configured `IOException` from synchronous and asynchronous reads, records disposal, and can simulate a close failure.
+
+### `CloseFailingMemoryStream`
+
+Test-only readable stream that records disposal and throws from close so handler protocol-error preservation can be verified.
+
 ### `ReadBufferTrackingStream`
 
 Test-only stream that records the backing array supplied to each async read.
@@ -46,5 +54,9 @@ Test-only stream that keeps a read pending until the test supplies one byte with
 - Cancellation during an active `ReadOnceAsync` closes the stream, restores the read slot, prevents later reads, and does not invoke the data handler.
 - A close failure after active read cancellation does not replace cancellation; both failures remain available and the reader remains unusable.
 - Cancellation while waiting for the read slot leaves the active stream open and usable after the current read completes.
+- Sync read `IOException` closes the stream, restores the read slot, and prevents later reads.
+- Async read `IOException` closes the stream, restores the read slot, and prevents later reads.
+- A close failure after either sync or async read failure preserves both failures under the original I/O error type while the reader remains unusable.
+- A close failure after handler `InvalidDataException` preserves the protocol exception type and both underlying failures while the reader remains unusable.
 - Repeated async reads reuse the same backing buffer.
 - Normal and idle-timeout reads complete stream and handler continuations without posting to a caller synchronization context.

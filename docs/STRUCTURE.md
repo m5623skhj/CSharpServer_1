@@ -77,6 +77,8 @@ The network layer adapts byte streams and TCP connections into packet sessions.
 - `StreamConnectionReader` serializes synchronous and asynchronous raw reads from a stream.
 - `StreamConnectionReader` reuses one read buffer and passes borrowed memory through the internal pipeline.
 - Active read or handler cancellation makes `StreamConnectionReader` unusable and closes the stream, while cancellation queued at the read semaphore leaves the current connection untouched.
+- Sync and async reader `IOException` failures also make the reader unusable before stream cleanup so partial inbound packet state cannot be reused.
+- Packet-handler `InvalidDataException` follows the same rule while retaining its protocol-specific exception type through cleanup failure.
 - `StreamConnectionReader` avoids synchronization-context capture across async read-slot, stream-read, and handler waits, including idle-timeout reads.
 - `StreamConnectionTransport` serializes each sync and async frame write through its flush, leaves the connection open when a queued send is canceled before I/O, and closes it when cancellation can leave a partial active frame.
 - Sync and async transport `IOException` failures also close the connection before the send slot is released so later packets cannot reuse a partial frame.

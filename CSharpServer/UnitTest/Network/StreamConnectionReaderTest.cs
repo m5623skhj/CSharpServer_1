@@ -56,6 +56,70 @@ namespace UnitTest.Network
         }
 
         [Fact]
+        public void ReadOnce_ClosesReader_WhenReadThrowsIOException()
+        {
+            var expectedException = new IOException("read failed");
+            using var stream = new FailingReadStream(expectedException);
+            var reader = new StreamConnectionReader(
+                stream,
+                inBufferSize: 8,
+                _ => { });
+
+            var exception = Assert.Throws<IOException>(() => reader.ReadOnce());
+
+            Assert.Same(expectedException, exception);
+            Assert.True(stream.IsDisposed);
+            Assert.Equal(1, reader.AvailableReadSlotCount);
+            Assert.Throws<ObjectDisposedException>(() => reader.ReadOnce());
+        }
+
+        [Fact]
+        public void ReadOnce_PreservesIOException_WhenClosingFailedReadFails()
+        {
+            var expectedException = new IOException("read failed");
+            var stream = new FailingReadStream(
+                expectedException,
+                throwOnDispose: true);
+            var reader = new StreamConnectionReader(
+                stream,
+                inBufferSize: 8,
+                _ => { });
+
+            var exception = Assert.Throws<IOException>(() => reader.ReadOnce());
+
+            var innerException = Assert.IsType<AggregateException>(exception.InnerException);
+            Assert.Collection(
+                innerException.InnerExceptions,
+                item => Assert.Same(expectedException, item),
+                item => Assert.IsType<IOException>(item));
+            Assert.True(stream.IsDisposed);
+            Assert.Equal(1, reader.AvailableReadSlotCount);
+            Assert.Throws<ObjectDisposedException>(() => reader.ReadOnce());
+        }
+
+        [Fact]
+        public void ReadOnce_PreservesInvalidDataException_WhenClosingFailedHandlerFails()
+        {
+            var expectedException = new InvalidDataException("invalid packet");
+            var stream = new CloseFailingMemoryStream([0x01]);
+            var reader = new StreamConnectionReader(
+                stream,
+                inBufferSize: 8,
+                _ => throw expectedException);
+
+            var exception = Assert.Throws<InvalidDataException>(() => reader.ReadOnce());
+
+            var innerException = Assert.IsType<AggregateException>(exception.InnerException);
+            Assert.Collection(
+                innerException.InnerExceptions,
+                item => Assert.Same(expectedException, item),
+                item => Assert.IsType<IOException>(item));
+            Assert.True(stream.IsDisposed);
+            Assert.Equal(1, reader.AvailableReadSlotCount);
+            Assert.Throws<ObjectDisposedException>(() => reader.ReadOnce());
+        }
+
+        [Fact]
         public void Constructor_ThrowsArgumentOutOfRangeException_WhenBufferSizeIsZero()
         {
             using var stream = new MemoryStream();
@@ -170,6 +234,52 @@ namespace UnitTest.Network
 
             Assert.False(stream.IsDisposed);
             Assert.Equal(1, reader.AvailableReadSlotCount);
+        }
+
+        [Fact]
+        public async Task ReadOnceAsync_ClosesReader_WhenReadThrowsIOException()
+        {
+            var expectedException = new IOException("read failed");
+            using var stream = new FailingReadStream(expectedException);
+            var reader = new StreamConnectionReader(
+                stream,
+                inBufferSize: 8,
+                _ => { });
+
+            var exception = await Assert.ThrowsAsync<IOException>(() =>
+                reader.ReadOnceAsync(CancellationToken.None));
+
+            Assert.Same(expectedException, exception);
+            Assert.True(stream.IsDisposed);
+            Assert.Equal(1, reader.AvailableReadSlotCount);
+            await Assert.ThrowsAsync<ObjectDisposedException>(() =>
+                reader.ReadOnceAsync(CancellationToken.None));
+        }
+
+        [Fact]
+        public async Task ReadOnceAsync_PreservesIOException_WhenClosingFailedReadFails()
+        {
+            var expectedException = new IOException("read failed");
+            var stream = new FailingReadStream(
+                expectedException,
+                throwOnDispose: true);
+            var reader = new StreamConnectionReader(
+                stream,
+                inBufferSize: 8,
+                _ => { });
+
+            var exception = await Assert.ThrowsAsync<IOException>(() =>
+                reader.ReadOnceAsync(CancellationToken.None));
+
+            var innerException = Assert.IsType<AggregateException>(exception.InnerException);
+            Assert.Collection(
+                innerException.InnerExceptions,
+                item => Assert.Same(expectedException, item),
+                item => Assert.IsType<IOException>(item));
+            Assert.True(stream.IsDisposed);
+            Assert.Equal(1, reader.AvailableReadSlotCount);
+            await Assert.ThrowsAsync<ObjectDisposedException>(() =>
+                reader.ReadOnceAsync(CancellationToken.None));
         }
 
         [Fact]
@@ -298,6 +408,72 @@ namespace UnitTest.Network
                     }
 
                     continuation.Callback(continuation.State);
+                }
+            }
+        }
+
+        private sealed class FailingReadStream : MemoryStream
+        {
+            private readonly IOException readException;
+            private readonly bool throwOnDispose;
+
+            public FailingReadStream(
+                IOException readException,
+                bool throwOnDispose = false)
+            {
+                this.readException = readException;
+                this.throwOnDispose = throwOnDispose;
+            }
+
+            public bool IsDisposed { get; private set; }
+
+            public override int Read(Span<byte> buffer)
+            {
+                throw readException;
+            }
+
+            public override ValueTask<int> ReadAsync(
+                Memory<byte> buffer,
+                CancellationToken cancellationToken = default)
+            {
+                return ValueTask.FromException<int>(readException);
+            }
+
+            protected override void Dispose(bool disposing)
+            {
+                if (disposing)
+                {
+                    IsDisposed = true;
+                }
+
+                base.Dispose(disposing);
+                if (disposing && throwOnDispose)
+                {
+                    throw new IOException("close failed");
+                }
+            }
+        }
+
+        private sealed class CloseFailingMemoryStream : MemoryStream
+        {
+            public CloseFailingMemoryStream(byte[] data)
+                : base(data)
+            {
+            }
+
+            public bool IsDisposed { get; private set; }
+
+            protected override void Dispose(bool disposing)
+            {
+                if (disposing)
+                {
+                    IsDisposed = true;
+                }
+
+                base.Dispose(disposing);
+                if (disposing)
+                {
+                    throw new IOException("close failed");
                 }
             }
         }

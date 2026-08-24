@@ -26,7 +26,7 @@ Construction rejects null streams, non-positive buffer sizes, and null packet ha
 
 ### `ReadOnce()`
 
-Reads one chunk from the stream through `StreamConnectionReader`.
+Reads one chunk from the stream through `StreamConnectionReader`. A read or handler `IOException`, or handler `InvalidDataException`, closes the stream and prevents later reads from reusing uncertain packet state.
 
 ### `ReadUntilEnd()`
 
@@ -34,7 +34,7 @@ Repeatedly calls `ReadOnce()` until EOF.
 
 ### `ReadUntilEndAsync(CancellationToken cancellationToken)`
 
-Repeatedly awaits `StreamConnectionReader.ReadOnceAsync` until EOF and propagates cancellation. Cancellation during an active read or handler closes the stream and prevents later reads from reusing uncertain packet state. The read loop does not capture a caller synchronization context.
+Repeatedly awaits `StreamConnectionReader.ReadOnceAsync` until EOF and propagates cancellation. Cancellation, `IOException`, or handler `InvalidDataException` during active work closes the stream and prevents later reads from reusing uncertain packet state. The read loop does not capture a caller synchronization context.
 
 ### `ReadUntilEndAsync(CancellationToken cancellationToken, TimeSpan idleTimeout)`
 

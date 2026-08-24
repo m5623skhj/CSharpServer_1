@@ -56,6 +56,16 @@ namespace CSharpServer.Network
                 CloseAfterCancellation(exception, CancellationToken.None);
                 throw;
             }
+            catch (InvalidDataException exception)
+            {
+                CloseAfterInvalidDataException(exception);
+                throw;
+            }
+            catch (IOException exception)
+            {
+                CloseAfterIOException(exception);
+                throw;
+            }
             finally
             {
                 readSemaphore.Release();
@@ -82,6 +92,16 @@ namespace CSharpServer.Network
             catch (OperationCanceledException exception)
             {
                 CloseAfterCancellation(exception, cancellationToken);
+                throw;
+            }
+            catch (InvalidDataException exception)
+            {
+                CloseAfterInvalidDataException(exception);
+                throw;
+            }
+            catch (IOException exception)
+            {
+                CloseAfterIOException(exception);
                 throw;
             }
             finally
@@ -135,6 +155,16 @@ namespace CSharpServer.Network
                 CloseAfterCancellation(exception, cancellationToken);
                 throw;
             }
+            catch (InvalidDataException exception)
+            {
+                CloseAfterInvalidDataException(exception);
+                throw;
+            }
+            catch (IOException exception)
+            {
+                CloseAfterIOException(exception);
+                throw;
+            }
             finally
             {
                 readSemaphore.Release();
@@ -163,6 +193,36 @@ namespace CSharpServer.Network
                     exception.Message,
                     new AggregateException(exception, closeException),
                     propagatedCancellationToken);
+            }
+        }
+
+        private void CloseAfterIOException(IOException exception)
+        {
+            Interlocked.Exchange(ref unusableState, 1);
+            try
+            {
+                stream.Close();
+            }
+            catch (Exception closeException)
+            {
+                throw new IOException(
+                    exception.Message,
+                    new AggregateException(exception, closeException));
+            }
+        }
+
+        private void CloseAfterInvalidDataException(InvalidDataException exception)
+        {
+            Interlocked.Exchange(ref unusableState, 1);
+            try
+            {
+                stream.Close();
+            }
+            catch (Exception closeException)
+            {
+                throw new InvalidDataException(
+                    exception.Message,
+                    new AggregateException(exception, closeException));
             }
         }
 
