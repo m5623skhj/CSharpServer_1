@@ -19,6 +19,7 @@ Starts and runs the loopback TCP echo server until cancellation is requested.
 ### `RunAsync(ServerOptions options, CancellationToken cancellationToken)`
 
 - Rejects null options before reading server configuration.
+- Returns without creating, binding, or announcing a listener when cancellation was already requested after options validation.
 - Uses a previously validated `ServerOptions` instance.
 - Creates an `EchoTcpServer` bound to `127.0.0.1` with a 4096-byte read buffer.
 - Passes the validated concurrent client limit and client idle timeout to the server.
@@ -30,3 +31,5 @@ Starts and runs the loopback TCP echo server until cancellation is requested.
 ## Notes
 
 Fixed-client-count APIs remain available on `EchoTcpServer`, but the executable uses the open-ended cancellable mode.
+
+Null options remain a programming error even when the supplied cancellation token is already canceled. For valid options, pre-cancellation is a normal no-op shutdown path consistent with cancellation requested after startup.

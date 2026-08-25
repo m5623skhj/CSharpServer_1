@@ -21,5 +21,6 @@ Test-only synchronization context that queues posted continuations so applicatio
 ## Test Coverage
 
 - `RunAsync` rejects null options before server startup.
+- An already canceled token returns without attempting to bind an occupied loopback port.
 - `RunAsync` starts with an OS-assigned port and returns after cancellation is requested.
 - `RunAsync` completes cancellation without posting its continuation to a caller synchronization context.

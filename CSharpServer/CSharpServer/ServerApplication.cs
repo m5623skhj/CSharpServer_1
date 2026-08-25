@@ -10,6 +10,10 @@ public sealed class ServerApplication
     public async Task RunAsync(ServerOptions options, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(options);
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return;
+        }
 
         using var server = new EchoTcpServer(
             IPAddress.Loopback,

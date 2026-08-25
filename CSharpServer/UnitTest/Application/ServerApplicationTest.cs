@@ -1,3 +1,5 @@
+using System.Net;
+using System.Net.Sockets;
 using CSharpServer;
 
 namespace UnitTest.Application
@@ -24,6 +26,24 @@ namespace UnitTest.Application
             await cancellationTokenSource.CancelAsync();
 
             await runTask.WaitAsync(TimeSpan.FromSeconds(5));
+        }
+
+        [Fact]
+        public async Task RunAsync_DoesNotStartListener_WhenTokenIsAlreadyCanceled()
+        {
+            using var occupiedListener = new TcpListener(IPAddress.Loopback, 0);
+            occupiedListener.Server.ExclusiveAddressUse = true;
+            occupiedListener.Start();
+            var occupiedPort = ((IPEndPoint)occupiedListener.LocalEndpoint).Port;
+            Assert.True(ServerOptions.TryParse(
+                [occupiedPort.ToString()],
+                out var options,
+                out _));
+            using var cancellationTokenSource = new CancellationTokenSource();
+            await cancellationTokenSource.CancelAsync();
+            var application = new ServerApplication();
+
+            await application.RunAsync(options!, cancellationTokenSource.Token);
         }
 
         [Fact]
