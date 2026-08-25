@@ -42,7 +42,7 @@ Reads from a `Stream` and forwards read bytes to a data handler.
 
 ## Internal Async Read Behavior
 
-The idle-timeout overload accepts values up to `UInt32.MaxValue - 1` milliseconds and rejects values outside the supported positive range before reading. It uses a linked token only for the pending stream read. An idle timeout returns `false`; caller cancellation during an active read or handler closes the stream and propagates. After bytes arrive, it invokes the async data handler with the original caller cancellation token so content processing and writes are not classified as client idle time. This overload also avoids synchronization-context capture across its asynchronous waits.
+The idle-timeout overload accepts values up to `UInt32.MaxValue - 1` milliseconds and rejects values outside the supported positive range before reading. It uses a linked token only for the pending stream read. An idle timeout marks the reader unusable, closes the stream, and returns `false`; this prevents a canceled read with uncertain packet state from being reused. If stream cleanup fails, it throws `IOException` with both the timeout cancellation and close failure retained in an inner `AggregateException`. Caller cancellation during an active read or handler also closes the stream and propagates. After bytes arrive, the overload invokes the async data handler with the original caller cancellation token so content processing and writes are not classified as client idle time. This overload also avoids synchronization-context capture across its asynchronous waits.
 
 ## Constructor Behavior
 
@@ -55,7 +55,7 @@ The idle-timeout overload accepts values up to `UInt32.MaxValue - 1` millisecond
 
 Synchronous and asynchronous calls share one `SemaphoreSlim`. Public callbacks receive an independent byte array for compatibility; the internal server pipeline consumes borrowed `ReadOnlyMemory<byte>` before the next read.
 
-Once active work is canceled or fails with `IOException` or `InvalidDataException`, the unusable state is recorded before stream cleanup. Later reads therefore fail with `ObjectDisposedException` even if stream cleanup itself throws.
+Once active work is canceled, reaches the idle timeout, or fails with `IOException` or `InvalidDataException`, the unusable state is recorded before stream cleanup. Later reads therefore fail with `ObjectDisposedException` even if stream cleanup itself throws.
 
 Async read internals do not depend on pumping a UI or single-threaded caller context before invoking the handler or releasing the read slot.
 

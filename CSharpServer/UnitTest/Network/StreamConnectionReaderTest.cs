@@ -211,6 +211,53 @@ namespace UnitTest.Network
         }
 
         [Fact]
+        public async Task ReadOnceAsync_ClosesReader_WhenIdleTimeoutExpires()
+        {
+            using var stream = new CancellationAwareReadStream();
+            var reader = new StreamConnectionReader(
+                stream,
+                inBufferSize: 8,
+                _ => { });
+            var readTask = reader.ReadOnceAsync(
+                CancellationToken.None,
+                TimeSpan.FromMilliseconds(50));
+
+            await stream.ReadStarted.Task.WaitAsync(TimeSpan.FromSeconds(1));
+
+            Assert.False(await readTask.WaitAsync(TimeSpan.FromSeconds(1)));
+            Assert.True(stream.IsDisposed);
+            Assert.Equal(1, reader.AvailableReadSlotCount);
+            await Assert.ThrowsAsync<ObjectDisposedException>(() =>
+                reader.ReadOnceAsync(CancellationToken.None));
+        }
+
+        [Fact]
+        public async Task ReadOnceAsync_PreservesIdleTimeout_WhenClosingStreamFails()
+        {
+            var stream = new CancellationAwareReadStream(throwOnDispose: true);
+            var reader = new StreamConnectionReader(
+                stream,
+                inBufferSize: 8,
+                _ => { });
+            var readTask = reader.ReadOnceAsync(
+                CancellationToken.None,
+                TimeSpan.FromMilliseconds(50));
+
+            await stream.ReadStarted.Task.WaitAsync(TimeSpan.FromSeconds(1));
+
+            var exception = await Assert.ThrowsAsync<IOException>(() => readTask);
+            var innerException = Assert.IsType<AggregateException>(exception.InnerException);
+            Assert.Collection(
+                innerException.InnerExceptions,
+                item => Assert.IsAssignableFrom<OperationCanceledException>(item),
+                item => Assert.IsType<IOException>(item));
+            Assert.True(stream.IsDisposed);
+            Assert.Equal(1, reader.AvailableReadSlotCount);
+            await Assert.ThrowsAsync<ObjectDisposedException>(() =>
+                reader.ReadOnceAsync(CancellationToken.None));
+        }
+
+        [Fact]
         public async Task ReadOnceAsync_DoesNotCloseStream_WhenCanceledWhileWaitingForReadSlot()
         {
             using var stream = new ConcurrentAsyncReadTrackingStream();

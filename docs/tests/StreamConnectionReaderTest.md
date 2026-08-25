@@ -53,6 +53,8 @@ Test-only stream that keeps a read pending until the test supplies one byte with
 - Concurrent reads verify the semaphore slot is restored after completion.
 - Cancellation during an active `ReadOnceAsync` closes the stream, restores the read slot, prevents later reads, and does not invoke the data handler.
 - A close failure after active read cancellation does not replace cancellation; both failures remain available and the reader remains unusable.
+- An idle timeout closes the stream, restores the read slot, returns `false`, and prevents later reads from reusing uncertain packet state.
+- A close failure after an idle timeout reports `IOException`, preserves both the timeout cancellation and close failure, and leaves the reader unusable.
 - Cancellation while waiting for the read slot leaves the active stream open and usable after the current read completes.
 - Sync read `IOException` closes the stream, restores the read slot, and prevents later reads.
 - Async read `IOException` closes the stream, restores the read slot, and prevents later reads.

@@ -40,7 +40,8 @@ Repeatedly awaits `StreamConnectionReader.ReadOnceAsync` until EOF and propagate
 
 - Applies a fresh linked timeout only while each asynchronous stream read is pending.
 - Resets the idle timeout after every successful read.
-- Returns normally when the idle timeout expires.
+- Marks the connection reader unusable, closes the stream, and returns normally when the idle timeout expires.
+- Throws `IOException` with both failures retained if closing the timed-out stream fails.
 - Passes the original caller cancellation token to packet handlers and asynchronous writes.
 - Continues to propagate caller-requested cancellation during reads and handlers.
 - Accepts idle timeouts up to `UInt32.MaxValue - 1` milliseconds.

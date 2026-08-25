@@ -133,10 +133,11 @@ namespace CSharpServer.Network
                     readCount = await stream.ReadAsync(buffer, idleCancellation.Token)
                         .ConfigureAwait(false);
                 }
-                catch (OperationCanceledException)
+                catch (OperationCanceledException exception)
                     when (!cancellationToken.IsCancellationRequested
                         && idleCancellation.IsCancellationRequested)
                 {
+                    CloseAfterIdleTimeout(exception);
                     return false;
                 }
 
@@ -161,6 +162,7 @@ namespace CSharpServer.Network
                 throw;
             }
             catch (IOException exception)
+                when (Volatile.Read(ref unusableState) == 0)
             {
                 CloseAfterIOException(exception);
                 throw;
@@ -193,6 +195,21 @@ namespace CSharpServer.Network
                     exception.Message,
                     new AggregateException(exception, closeException),
                     propagatedCancellationToken);
+            }
+        }
+
+        private void CloseAfterIdleTimeout(OperationCanceledException exception)
+        {
+            Interlocked.Exchange(ref unusableState, 1);
+            try
+            {
+                stream.Close();
+            }
+            catch (Exception closeException)
+            {
+                throw new IOException(
+                    "Stream cleanup failed after the idle timeout.",
+                    new AggregateException(exception, closeException));
             }
         }
 
