@@ -50,7 +50,7 @@ Repeatedly awaits `StreamConnectionReader.ReadOnceAsync` until EOF and propagate
 
 ### `Send(byte[] payload)`
 
-Rejects a null payload and sends an encoded packet through the internal `Connection`. A transport `IOException` closes the stream so a partial packet cannot be reused.
+Rejects a null payload and sends an encoded packet through the internal `Connection`. Transport cancellation or `IOException` closes the stream so a partial packet cannot be reused.
 
 ### `SendAsync(byte[] payload, CancellationToken cancellationToken)`
 

@@ -27,6 +27,11 @@ namespace CSharpServer.Network
                 stream.Write(data);
                 stream.Flush();
             }
+            catch (OperationCanceledException exception)
+            {
+                CloseAfterCancellation(exception, CancellationToken.None);
+                throw;
+            }
             catch (IOException exception)
             {
                 CloseAfterIOException(exception);
@@ -51,25 +56,7 @@ namespace CSharpServer.Network
             }
             catch (OperationCanceledException exception)
             {
-                try
-                {
-                    Close();
-                }
-                catch (Exception closeException)
-                {
-                    var propagatedCancellationToken = exception.CancellationToken;
-                    if (!propagatedCancellationToken.CanBeCanceled
-                        && cancellationToken.IsCancellationRequested)
-                    {
-                        propagatedCancellationToken = cancellationToken;
-                    }
-
-                    throw new OperationCanceledException(
-                        exception.Message,
-                        new AggregateException(exception, closeException),
-                        propagatedCancellationToken);
-                }
-
+                CloseAfterCancellation(exception, cancellationToken);
                 throw;
             }
             catch (IOException exception)
@@ -94,6 +81,30 @@ namespace CSharpServer.Network
 
                 isClosed = true;
                 stream.Close();
+            }
+        }
+
+        private void CloseAfterCancellation(
+            OperationCanceledException exception,
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                Close();
+            }
+            catch (Exception closeException)
+            {
+                var propagatedCancellationToken = exception.CancellationToken;
+                if (!propagatedCancellationToken.CanBeCanceled
+                    && cancellationToken.IsCancellationRequested)
+                {
+                    propagatedCancellationToken = cancellationToken;
+                }
+
+                throw new OperationCanceledException(
+                    exception.Message,
+                    new AggregateException(exception, closeException),
+                    propagatedCancellationToken);
             }
         }
 

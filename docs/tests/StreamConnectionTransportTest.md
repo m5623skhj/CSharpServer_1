@@ -28,7 +28,7 @@ Test-only stream that keeps a write active until the test releases it and record
 
 ### `CancellationAwareWriteStream`
 
-Test-only stream that keeps an async write pending until cancellation, records disposal, and can simulate a close failure.
+Test-only stream that reports cancellation from synchronous writes or keeps an async write pending until cancellation, records disposal, and can simulate a close failure.
 
 ### `ConcurrentAsyncWriteStream`
 
@@ -51,6 +51,8 @@ Test-only stream that keeps an asynchronous write pending until the test complet
 - `Send` rejects writes after close and returns its send slot after the exception.
 - Sync write `IOException` closes the transport, restores the send slot, and prevents later sends.
 - A close failure after sync write failure preserves both failures under the original I/O error type.
+- Sync write cancellation closes the transport, restores the send slot, and prevents later sends from appending to a potentially partial frame.
+- A close failure after sync write cancellation preserves cancellation and both underlying failures.
 - `SendAsync` propagates cancellation to an active stream write, closes the transport, and prevents later sends from reusing a potentially partial frame.
 - A close failure after active send cancellation does not replace cancellation; both failures remain available.
 - Cancellation while waiting for the send slot leaves the active stream open and usable after the current send completes.

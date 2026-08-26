@@ -99,6 +99,41 @@ namespace UnitTest.Network
         }
 
         [Fact]
+        public void Send_ClosesTransport_WhenWriteIsCanceled()
+        {
+            using var stream = new CancellationAwareWriteStream();
+            var transport = new StreamConnectionTransport(stream);
+
+            Assert.ThrowsAny<OperationCanceledException>(() =>
+                transport.Send([0x01]));
+
+            Assert.True(stream.IsDisposed);
+            Assert.Equal(1, transport.AvailableSendSlotCount);
+            Assert.Throws<ObjectDisposedException>(() =>
+                transport.Send([0x02]));
+        }
+
+        [Fact]
+        public void Send_PreservesCancellation_WhenClosingCanceledWriteFails()
+        {
+            var stream = new CancellationAwareWriteStream(throwOnDispose: true);
+            var transport = new StreamConnectionTransport(stream);
+
+            var exception = Assert.ThrowsAny<OperationCanceledException>(() =>
+                transport.Send([0x01]));
+
+            var innerException = Assert.IsType<AggregateException>(exception.InnerException);
+            Assert.Collection(
+                innerException.InnerExceptions,
+                item => Assert.IsAssignableFrom<OperationCanceledException>(item),
+                item => Assert.IsType<IOException>(item));
+            Assert.True(stream.IsDisposed);
+            Assert.Equal(1, transport.AvailableSendSlotCount);
+            Assert.Throws<ObjectDisposedException>(() =>
+                transport.Send([0x02]));
+        }
+
+        [Fact]
         public async Task SendAsync_PropagatesCancellationToStreamWrite()
         {
             using var stream = new CancellationAwareWriteStream();
@@ -591,7 +626,7 @@ namespace UnitTest.Network
             public override void SetLength(long value) => throw new NotSupportedException();
 
             public override void Write(byte[] buffer, int offset, int count) =>
-                throw new NotSupportedException();
+                throw new OperationCanceledException("write canceled");
 
             public override async ValueTask WriteAsync(
                 ReadOnlyMemory<byte> buffer,
