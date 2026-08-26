@@ -20,11 +20,11 @@ Rejects a null transport or payload handler during construction.
 
 ### `ReceiveFromTransport(ReadOnlyMemory<byte> data)`
 
-Passes raw bytes from the transport into the internal `Session`.
+Passes raw bytes from the transport into the internal `Session`. Invalid packet data makes session receive processing unusable, so later receives are rejected before buffering more bytes.
 
 ### `ReceiveFromTransportAsync(ReadOnlyMemory<byte> data, CancellationToken cancellationToken)`
 
-Passes raw bytes into asynchronous session processing, forwards the caller cancellation token, and propagates packet handler failures.
+Passes raw bytes into asynchronous session processing, forwards the caller cancellation token, and propagates packet handler failures. Packet or handler `InvalidDataException` makes later receives fail before additional data is buffered.
 
 ### `Send(byte[] payload)`
 

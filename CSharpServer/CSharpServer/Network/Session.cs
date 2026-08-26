@@ -10,6 +10,7 @@ namespace CSharpServer.Network
         private readonly Func<byte[], CancellationToken, ValueTask> asyncPacketHandler;
         private readonly Func<ReadOnlyMemory<byte>, CancellationToken, ValueTask> asyncPacketSender;
         private readonly SemaphoreSlim receiveSemaphore = new(1, 1);
+        private int unusableReceiveState;
 
         public Session(Action<byte[]> packetHandler)
             : this(packetHandler, _ => { })
@@ -64,12 +65,18 @@ namespace CSharpServer.Network
             receiveSemaphore.Wait();
             try
             {
+                ThrowIfReceiveUnusable();
                 packetBuffer.Append(data.Span);
 
                 while (packetBuffer.TryReadPacket(out var packet) && packet is not null)
                 {
                     packetHandler(packet);
                 }
+            }
+            catch (InvalidDataException)
+            {
+                Interlocked.Exchange(ref unusableReceiveState, 1);
+                throw;
             }
             finally
             {
@@ -84,12 +91,18 @@ namespace CSharpServer.Network
             await receiveSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
             try
             {
+                ThrowIfReceiveUnusable();
                 packetBuffer.Append(data.Span);
 
                 while (packetBuffer.TryReadPacket(out var packet) && packet is not null)
                 {
                     await asyncPacketHandler(packet, cancellationToken).ConfigureAwait(false);
                 }
+            }
+            catch (InvalidDataException)
+            {
+                Interlocked.Exchange(ref unusableReceiveState, 1);
+                throw;
             }
             finally
             {
@@ -105,6 +118,13 @@ namespace CSharpServer.Network
         public ValueTask SendAsync(byte[] payload, CancellationToken cancellationToken)
         {
             return asyncPacketSender(PacketEncoder.Encode(payload), cancellationToken);
+        }
+
+        private void ThrowIfReceiveUnusable()
+        {
+            ObjectDisposedException.ThrowIf(
+                Volatile.Read(ref unusableReceiveState) != 0,
+                this);
         }
     }
 }

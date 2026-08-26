@@ -69,7 +69,8 @@ The packet layer is pure byte processing.
 
 The network layer adapts byte streams and TCP connections into packet sessions.
 
-- `Session` owns packet encoding/decoding around sync and async payload handlers, preserves caller cancellation, and restores serialized receive state after cancellation or handler failure.
+- `Session` owns packet encoding/decoding around sync and async payload handlers, preserves caller cancellation, and restores serialized receive state after cancellation or recoverable handler failure.
+- Packet or handler `InvalidDataException` makes session receive processing unusable before releasing its slot so queued input cannot extend a poisoned packet buffer.
 - `Session` avoids synchronization-context capture across async receive-slot and packet-handler waits.
 - `Session.Receive(byte[])` rejects null byte arrays before appending data to the packet buffer.
 - `Session`, `Connection`, `StreamConnectionReader`, and `EchoPacketHandler` reject null collaborators at construction.

@@ -100,6 +100,20 @@ namespace UnitTest.Session
         }
 
         [Fact]
+        public void Receive_RejectsFurtherData_AfterInvalidPacketLength()
+        {
+            var session = new NetworkSession(_ => { });
+
+            Assert.Throws<InvalidDataException>(() =>
+                session.Receive([0xFF, 0xFF, 0xFF, 0xFF]));
+
+            Assert.Equal(1, session.AvailableReceiveSlotCount);
+            Assert.Throws<ObjectDisposedException>(() =>
+                session.Receive(PacketEncoder.Encode([0x01])));
+            Assert.Equal(1, session.AvailableReceiveSlotCount);
+        }
+
+        [Fact]
         public void Send_InvokesPacketSender_WithEncodedPacket()
         {
             var payload = new byte[] { 0x68, 0x65, 0x6C, 0x6C, 0x6F };
@@ -288,6 +302,36 @@ namespace UnitTest.Session
 
             var handledPayload = Assert.Single(handledPayloads);
             Assert.Equal(new byte[] { 0x02 }, handledPayload);
+            Assert.Equal(1, session.AvailableReceiveSlotCount);
+        }
+
+        [Fact]
+        public async Task ReceiveAsync_RejectsFurtherData_AfterHandlerReportsInvalidData()
+        {
+            var expectedException = new InvalidDataException("Invalid packet payload.");
+            var handlerInvocationCount = 0;
+            var session = new NetworkSession(
+                _ => { },
+                _ => { },
+                (_, _) =>
+                {
+                    Interlocked.Increment(ref handlerInvocationCount);
+                    return ValueTask.FromException(expectedException);
+                },
+                (_, _) => ValueTask.CompletedTask);
+
+            var actualException = await Assert.ThrowsAsync<InvalidDataException>(() =>
+                session.ReceiveAsync(
+                    PacketEncoder.Encode([0x01]),
+                    CancellationToken.None).AsTask());
+
+            Assert.Same(expectedException, actualException);
+            Assert.Equal(1, session.AvailableReceiveSlotCount);
+            await Assert.ThrowsAsync<ObjectDisposedException>(() =>
+                session.ReceiveAsync(
+                    PacketEncoder.Encode([0x02]),
+                    CancellationToken.None).AsTask());
+            Assert.Equal(1, handlerInvocationCount);
             Assert.Equal(1, session.AvailableReceiveSlotCount);
         }
 
