@@ -9,6 +9,29 @@ namespace UnitTest.Network
     public class EchoTcpServerTest
     {
         [Fact]
+        public void Port_ThrowsInvalidOperationException_WhenServerHasNotStarted()
+        {
+            using var server = new EchoTcpServer(
+                IPAddress.Loopback,
+                port: 0,
+                inBufferSize: 2);
+
+            Assert.Throws<InvalidOperationException>(() => server.Port);
+        }
+
+        [Fact]
+        public void Port_ThrowsObjectDisposedException_WhenServerIsDisposed()
+        {
+            var server = new EchoTcpServer(
+                IPAddress.Loopback,
+                port: 0,
+                inBufferSize: 2);
+            server.Dispose();
+
+            Assert.Throws<ObjectDisposedException>(() => server.Port);
+        }
+
+        [Fact]
         public async Task AcceptAndHandleOnce_ReturnsEchoResponseToClient()
         {
             using var server = new EchoTcpServer(IPAddress.Loopback, port: 0, inBufferSize: 2);
@@ -898,7 +921,7 @@ namespace UnitTest.Network
                 startGate.SignalAndWait();
                 await Task.WhenAll(startTask, disposeTask);
 
-                Assert.Equal(0, server.Port);
+                Assert.Throws<ObjectDisposedException>(() => server.Port);
             }
         }
 

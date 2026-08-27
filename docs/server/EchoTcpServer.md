@@ -37,7 +37,11 @@ Wraps `TcpListener` and accepts echo clients either sequentially or concurrently
 
 ### `Port`
 
-Returns the bound listener port. Useful when port `0` is used in tests.
+Returns the bound listener port after `Start()` completes successfully. Useful when port `0` is used in tests.
+
+- Throws `InvalidOperationException` before the listener has started instead of returning the unbound requested port.
+- Throws `ObjectDisposedException` after server disposal begins.
+- Shares the listener lifecycle lock with `Start()` and `Dispose()` so concurrent access observes a consistent state.
 
 ### `Start()`
 

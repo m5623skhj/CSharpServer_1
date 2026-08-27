@@ -22,6 +22,7 @@ namespace CSharpServer.Network
         private int waitingClientSlotCount;
         private int disposeState;
         private int clientSlotsDisposeState;
+        private bool isStarted;
 
         public EchoTcpServer(IPAddress ipAddress, int port, int inBufferSize)
             : this(
@@ -78,7 +79,23 @@ namespace CSharpServer.Network
             disposeToken = disposeCancellation.Token;
         }
 
-        public int Port => ((IPEndPoint)listener.LocalEndpoint).Port;
+        public int Port
+        {
+            get
+            {
+                lock (lifecycleLock)
+                {
+                    ThrowIfDisposed();
+                    if (!isStarted)
+                    {
+                        throw new InvalidOperationException(
+                            "The server listener has not been started.");
+                    }
+
+                    return ((IPEndPoint)listener.LocalEndpoint).Port;
+                }
+            }
+        }
         internal int ActiveClientCount => Volatile.Read(ref activeClientCount);
         internal int AvailableClientSlotCount
         {
@@ -99,6 +116,7 @@ namespace CSharpServer.Network
             {
                 ThrowIfDisposed();
                 listener.Start();
+                isStarted = true;
             }
         }
 
@@ -540,6 +558,7 @@ namespace CSharpServer.Network
                 lock (lifecycleLock)
                 {
                     listener.Stop();
+                    isStarted = false;
                 }
 
                 CloseActiveClients();

@@ -101,6 +101,7 @@ The network layer adapts byte streams and TCP connections into packet sessions.
 - `ServerApplication` rejects null options before reading server configuration.
 - `EchoTcpServer` accepts TCP clients and handles each as an echo stream connection.
 - `EchoTcpServer` validates its bind port as `0..65535`, preserving port `0` for OS-assigned test and runtime binding.
+- `EchoTcpServer.Port` exposes only a successfully bound listener endpoint and is serialized with listener startup and disposal.
 - `EchoTcpServer` can run either for a fixed client count or as a cancellable concurrent accept loop.
 - Fixed-count `EchoTcpServer` accepts and handler waits avoid caller synchronization-context capture.
 - Open-ended `EchoTcpServer` accept and cancellation cleanup waits also avoid caller synchronization-context capture.

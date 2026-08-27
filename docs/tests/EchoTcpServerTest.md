@@ -20,6 +20,7 @@ Test-only synchronization context that queues posted continuations so server-loo
 
 ## Test Coverage
 
+- Verifies that `Port` rejects access before listener startup and after server disposal with state-specific exceptions.
 - Starts `EchoTcpServer` on loopback with OS-assigned port.
 - Runs one server accept in a background task.
 - Uses `EchoClient` to send `hello`.
@@ -54,4 +55,4 @@ Test-only synchronization context that queues posted continuations so server-loo
 - Verifies that disposal of connection slots is retried when an asynchronous handler faults during shutdown.
 - Verifies that disposal is idempotent.
 - Verifies that start plus all sequential and concurrent accept entry points reject calls after disposal.
-- Repeats concurrent start and disposal to verify that shutdown cannot leave the listener reopened.
+- Repeats concurrent start and disposal to verify that shutdown cannot leave the listener reopened and that `Port` remains unavailable afterward.
