@@ -55,5 +55,6 @@ Test-only synchronization context that queues posted continuations so server-loo
 - Verifies that disposal also makes connection slot state unavailable after a synchronous handler completes.
 - Verifies that disposal of connection slots is retried when an asynchronous handler faults during shutdown.
 - Verifies that disposal is idempotent.
+- Holds a cancellation callback open to verify that a concurrent `Dispose()` call does not return before the first disposal finishes.
 - Verifies that start plus all sequential and concurrent accept entry points reject calls after disposal.
 - Repeats concurrent start and disposal to verify that shutdown cannot leave the listener reopened and that `Port` remains unavailable afterward.

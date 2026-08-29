@@ -119,9 +119,10 @@ Listener startup is serialized with disposal so a concurrent `Start` cannot reop
 - Interrupts blocked synchronous accepts with `ObjectDisposedException`.
 - Stops the listener and closes all accepted active clients.
 - Disposes cancellation and connection-slot resources.
+- Makes concurrent callers wait for the in-progress disposal to finish before returning.
 - Allows active handler tasks to complete during shutdown without surfacing slot-release disposal races.
 - Retries deferred connection-slot disposal after handlers leave their active section, including faulted asynchronous handlers.
-- Is idempotent.
+- Is idempotent, including reentrant calls from synchronous cancellation callbacks.
 
 ## Notes
 

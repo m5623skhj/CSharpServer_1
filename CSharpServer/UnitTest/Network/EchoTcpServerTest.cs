@@ -915,6 +915,55 @@ namespace UnitTest.Network
         }
 
         [Fact]
+        public async Task Dispose_WaitsForConcurrentDisposalToComplete()
+        {
+            var handlerEntered = new TaskCompletionSource(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+            var cancellationCallbackEntered = new TaskCompletionSource(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+            using var allowCancellationCallback = new ManualResetEventSlim();
+            var server = new EchoTcpServer(
+                IPAddress.Loopback,
+                port: 0,
+                inBufferSize: 2,
+                maxConcurrentClients: 1,
+                clientIdleTimeout: TimeSpan.FromSeconds(5),
+                clientHandler: async (_, cancellationToken) =>
+                {
+                    using var registration = cancellationToken.Register(() =>
+                    {
+                        cancellationCallbackEntered.TrySetResult();
+                        allowCancellationCallback.Wait();
+                    });
+                    handlerEntered.TrySetResult();
+                    await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+                });
+            using var client = new TcpClient();
+            server.Start();
+            var serverTask = server.AcceptAndHandleConcurrently(CancellationToken.None);
+
+            await client.ConnectAsync(IPAddress.Loopback, server.Port);
+            await handlerEntered.Task.WaitAsync(TimeSpan.FromSeconds(1));
+            var firstDispose = Task.Run(server.Dispose);
+            await cancellationCallbackEntered.Task.WaitAsync(TimeSpan.FromSeconds(1));
+            var secondDispose = Task.Run(server.Dispose);
+
+            try
+            {
+                await Assert.ThrowsAsync<TimeoutException>(() =>
+                    secondDispose.WaitAsync(TimeSpan.FromMilliseconds(100)));
+            }
+            finally
+            {
+                allowCancellationCallback.Set();
+                await Task.WhenAll(firstDispose, secondDispose)
+                    .WaitAsync(TimeSpan.FromSeconds(1));
+                await serverTask.WaitAsync(TimeSpan.FromSeconds(1));
+                server.Dispose();
+            }
+        }
+
+        [Fact]
         public void Start_ThrowsObjectDisposedException_WhenServerIsDisposed()
         {
             var server = new EchoTcpServer(IPAddress.Loopback, port: 0, inBufferSize: 2);

@@ -18,6 +18,7 @@ namespace CSharpServer.Network
         private readonly List<TcpClient> activeClients = [];
         private readonly object activeClientsLock = new();
         private readonly object lifecycleLock = new();
+        private readonly object disposeSyncRoot = new();
         private int activeClientCount;
         private int waitingClientSlotCount;
         private int disposeState;
@@ -548,26 +549,29 @@ namespace CSharpServer.Network
 
         public void Dispose()
         {
-            if (Interlocked.Exchange(ref disposeState, 1) != 0)
+            lock (disposeSyncRoot)
             {
-                return;
-            }
-
-            try
-            {
-                disposeCancellation.Cancel();
-            }
-            finally
-            {
-                lock (lifecycleLock)
+                if (Interlocked.Exchange(ref disposeState, 1) != 0)
                 {
-                    listener.Stop();
-                    isStarted = false;
+                    return;
                 }
 
-                CloseActiveClients();
-                disposeCancellation.Dispose();
-                DisposeClientSlotsIfSafe();
+                try
+                {
+                    disposeCancellation.Cancel();
+                }
+                finally
+                {
+                    lock (lifecycleLock)
+                    {
+                        listener.Stop();
+                        isStarted = false;
+                    }
+
+                    CloseActiveClients();
+                    disposeCancellation.Dispose();
+                    DisposeClientSlotsIfSafe();
+                }
             }
         }
 

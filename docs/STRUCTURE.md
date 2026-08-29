@@ -112,6 +112,7 @@ The network layer adapts byte streams and TCP connections into packet sessions.
 - Fixed-count mode also stops remaining accepts instead of waiting for the configured count after a handler fault or unexpected cancellation.
 - `EchoTcpServer` tracks accepted clients at server scope so disposal and accept failures can close every active connection.
 - Disposal cancels both asynchronous accept modes, stops the listener, closes active clients, and disposes cancellation and slot resources.
+- Concurrent `EchoTcpServer.Dispose` calls are serialized so every returning caller observes completed resource cleanup.
 - Disposal interrupts blocked synchronous accepts with `ObjectDisposedException` rather than exposing listener shutdown socket errors.
 - Deferred connection-slot disposal is retried after synchronous handlers complete so shutdown during handling does not skip cleanup.
 - Each asynchronous client read has a resettable idle timeout so inactive connections cannot remain indefinitely.
