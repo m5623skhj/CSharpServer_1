@@ -88,6 +88,7 @@ Listener startup is serialized with disposal so a concurrent `Start` cannot reop
 - Closes clients that do not produce read data before the configured idle timeout.
 - Stops waiting for new clients when cancellation is requested.
 - Closes already accepted active clients when cancellation is requested.
+- Treats a client handler that observes the supplied canceled token as normal shutdown.
 - Waits for accepted client handler tasks to complete before returning.
 - Does not capture a caller synchronization context while accepting or completing cancellation cleanup.
 
@@ -107,7 +108,8 @@ Listener startup is serialized with disposal so a concurrent `Start` cannot reop
 - Concurrent handlers await `StreamConnection.ReadUntilEndAsync` without wrapping synchronous reads in `Task.Run`.
 - Default client handlers do not capture a caller synchronization context while awaiting connection completion, including when accept completes synchronously for a queued client.
 - Concurrent echo responses use cancellation-aware asynchronous writes.
-- Expected cancellation from an active client read is handled as normal server shutdown.
+- Expected cancellation from any client handler using the server-supplied token is handled as normal server shutdown.
+- Handler cancellation remains an error when the server-supplied token has not been canceled.
 - Client-level connection, stream, and `InvalidDataException` failures are isolated so one bad client does not fault the server loop.
 - General `InvalidOperationException` failures are not swallowed as client network errors.
 

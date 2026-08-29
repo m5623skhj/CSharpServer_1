@@ -393,6 +393,10 @@ namespace CSharpServer.Network
             {
                 await clientHandler(client, cancellationToken).ConfigureAwait(false);
             }
+            catch (OperationCanceledException)
+                when (cancellationToken.IsCancellationRequested)
+            {
+            }
             finally
             {
                 UntrackClient(client);

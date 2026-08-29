@@ -117,7 +117,7 @@ The network layer adapts byte streams and TCP connections into packet sessions.
 - Each asynchronous client read has a resettable idle timeout so inactive connections cannot remain indefinitely.
 - Idle timeout tokens apply only to pending stream reads; packet handlers and writes retain the server cancellation token.
 - Concurrent client handlers use cancellation-aware asynchronous stream reads.
-- On cancellation, the open-ended `EchoTcpServer` loop closes active clients and waits for handler tasks to finish.
+- On cancellation, the open-ended `EchoTcpServer` loop closes active clients, normalizes handler cancellation tied to its token, and waits for handler tasks to finish.
 - Client-level malformed packet and connection exceptions are isolated from the server accept loop without swallowing general `InvalidOperationException` failures.
 
 ### Content Layer

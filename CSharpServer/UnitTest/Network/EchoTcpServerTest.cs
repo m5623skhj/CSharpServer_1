@@ -445,6 +445,37 @@ namespace UnitTest.Network
         }
 
         [Fact]
+        public async Task AcceptAndHandleConcurrently_ReturnsWhenCustomHandlerObservesCancellation()
+        {
+            var handlerEntered = new TaskCompletionSource(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+            using var server = new EchoTcpServer(
+                IPAddress.Loopback,
+                port: 0,
+                inBufferSize: 2,
+                maxConcurrentClients: 1,
+                clientIdleTimeout: TimeSpan.FromSeconds(5),
+                clientHandler: async (_, cancellationToken) =>
+                {
+                    handlerEntered.TrySetResult();
+                    await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+                });
+            using var cancellationTokenSource = new CancellationTokenSource();
+            using var client = new TcpClient();
+            server.Start();
+            var serverTask = server.AcceptAndHandleConcurrently(
+                cancellationTokenSource.Token);
+
+            await client.ConnectAsync(IPAddress.Loopback, server.Port);
+            await handlerEntered.Task.WaitAsync(TimeSpan.FromSeconds(1));
+            await cancellationTokenSource.CancelAsync();
+
+            await serverTask.WaitAsync(TimeSpan.FromSeconds(1));
+            Assert.Equal(0, server.ActiveClientCount);
+            Assert.Equal(1, server.AvailableClientSlotCount);
+        }
+
+        [Fact]
         public async Task Dispose_ClosesActiveClientsAndCompletesAcceptLoop()
         {
             using var server = new EchoTcpServer(
