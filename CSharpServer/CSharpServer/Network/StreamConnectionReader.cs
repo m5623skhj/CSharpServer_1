@@ -42,6 +42,11 @@ namespace CSharpServer.Network
 
         internal int AvailableReadSlotCount => readSemaphore.CurrentCount;
 
+        internal void MarkUnusable()
+        {
+            Interlocked.Exchange(ref unusableState, 1);
+        }
+
         public bool ReadOnce()
         {
             readSemaphore.Wait();

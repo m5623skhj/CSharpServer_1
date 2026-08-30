@@ -18,6 +18,10 @@ Verifies stream read, repeated read, echo wiring, send, and close behavior.
 
 Test-only stream that records disposal.
 
+### `CloseTolerantReadStream`
+
+Test-only stream that deliberately ignores `Dispose` and remains readable after `Close`, allowing the high-level connection lifecycle to be tested independently of stream disposal behavior.
+
 ### `CancellationAwareReadStream`
 
 Test-only stream that keeps an asynchronous read pending until cancellation.
@@ -52,3 +56,4 @@ Test-only stream whose EOF completion is controlled independently by the test.
 - `Send` and `SendAsync` reject null payloads.
 - `SendAsync` writes the encoded packet asynchronously and forwards the caller cancellation token.
 - `Close` closes the stream.
+- Reads after `Close` throw `ObjectDisposedException` without invoking the packet handler, even when the stream itself remains readable.

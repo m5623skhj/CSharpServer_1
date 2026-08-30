@@ -55,6 +55,8 @@ The idle-timeout overload accepts values up to `UInt32.MaxValue - 1` millisecond
 
 Synchronous and asynchronous calls share one `SemaphoreSlim`. Public callbacks receive an independent byte array for compatibility; the internal server pipeline consumes borrowed `ReadOnlyMemory<byte>` before the next read.
 
+`StreamConnection` can internally mark the reader unusable before it closes the shared transport. This keeps the high-level connection lifecycle independent of whether a custom `Stream` enforces disposal on later reads.
+
 Once active work is canceled, reaches the idle timeout, or fails with `IOException` or `InvalidDataException`, the unusable state is recorded before stream cleanup. Later reads therefore fail with `ObjectDisposedException` even if stream cleanup itself throws.
 
 Async read internals do not depend on pumping a UI or single-threaded caller context before invoking the handler or releasing the read slot.

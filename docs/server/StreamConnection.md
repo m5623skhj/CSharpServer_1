@@ -58,7 +58,7 @@ Rejects a null payload, sends an encoded packet through the asynchronous connect
 
 ### `Close()`
 
-Closes the internal connection transport.
+Marks the reader unusable before closing the internal connection transport. Later read calls therefore throw `ObjectDisposedException` even when a custom stream implementation continues to allow reads after `Close`.
 
 ## Notes
 

@@ -99,6 +99,7 @@ namespace CSharpServer.Network
 
         public void Close()
         {
+            reader.MarkUnusable();
             connection.Close();
         }
     }

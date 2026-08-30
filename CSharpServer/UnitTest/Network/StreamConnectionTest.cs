@@ -313,6 +313,20 @@ namespace UnitTest.Network
             Assert.True(stream.IsDisposed);
         }
 
+        [Fact]
+        public void ReadOnce_ThrowsObjectDisposedException_WhenConnectionWasClosed()
+        {
+            var payload = new byte[] { 0x68, 0x65, 0x6C, 0x6C, 0x6F };
+            using var stream = new CloseTolerantReadStream(PacketEncoder.Encode(payload));
+            var receivedPackets = new List<byte[]>();
+            var connection = new StreamConnection(stream, inBufferSize: 16, receivedPackets.Add);
+
+            connection.Close();
+
+            Assert.Throws<ObjectDisposedException>(() => connection.ReadOnce());
+            Assert.Empty(receivedPackets);
+        }
+
         private sealed class TrackingStream : MemoryStream
         {
             public bool IsDisposed { get; private set; }
@@ -321,6 +335,18 @@ namespace UnitTest.Network
             {
                 IsDisposed = true;
                 base.Dispose(disposing);
+            }
+        }
+
+        private sealed class CloseTolerantReadStream : MemoryStream
+        {
+            public CloseTolerantReadStream(byte[] buffer)
+                : base(buffer)
+            {
+            }
+
+            protected override void Dispose(bool disposing)
+            {
             }
         }
 
