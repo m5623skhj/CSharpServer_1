@@ -58,6 +58,7 @@ namespace CSharpServer.Network
 
         public void Close()
         {
+            session.MarkReceiveUnusable();
             transport.Close();
         }
     }

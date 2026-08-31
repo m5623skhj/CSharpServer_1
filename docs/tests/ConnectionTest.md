@@ -27,3 +27,4 @@ Test-only `IConnectionTransport` implementation that records sent packets and cl
 - Sending a payload writes an encoded packet to transport.
 - Sending a payload asynchronously writes an encoded packet through the async transport contract.
 - Closing a connection closes the transport.
+- Synchronous and asynchronous receives after close throw `ObjectDisposedException` without invoking their packet handlers.

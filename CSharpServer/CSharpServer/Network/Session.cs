@@ -53,6 +53,11 @@ namespace CSharpServer.Network
 
         internal int AvailableReceiveSlotCount => receiveSemaphore.CurrentCount;
 
+        internal void MarkReceiveUnusable()
+        {
+            Interlocked.Exchange(ref unusableReceiveState, 1);
+        }
+
         public void Receive(byte[] data)
         {
             ArgumentNullException.ThrowIfNull(data);

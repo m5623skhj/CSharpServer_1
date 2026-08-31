@@ -125,6 +125,41 @@ namespace UnitTest.Network
             Assert.True(transport.IsClosed);
         }
 
+        [Fact]
+        public void ReceiveFromTransport_ThrowsObjectDisposedException_WhenConnectionWasClosed()
+        {
+            var receivedPackets = new List<byte[]>();
+            var transport = new FakeConnectionTransport();
+            var connection = new Connection(transport, receivedPackets.Add);
+            connection.Close();
+
+            Assert.Throws<ObjectDisposedException>(() =>
+                connection.ReceiveFromTransport(PacketEncoder.Encode([0x01])));
+            Assert.Empty(receivedPackets);
+        }
+
+        [Fact]
+        public async Task ReceiveFromTransportAsync_ThrowsObjectDisposedException_WhenConnectionWasClosed()
+        {
+            var receivedPackets = new List<byte[]>();
+            var transport = new FakeConnectionTransport();
+            var connection = new Connection(
+                transport,
+                _ => { },
+                (packet, _) =>
+                {
+                    receivedPackets.Add(packet);
+                    return ValueTask.CompletedTask;
+                });
+            connection.Close();
+
+            await Assert.ThrowsAsync<ObjectDisposedException>(() =>
+                connection.ReceiveFromTransportAsync(
+                    PacketEncoder.Encode([0x01]),
+                    CancellationToken.None).AsTask());
+            Assert.Empty(receivedPackets);
+        }
+
         private sealed class FakeConnectionTransport : IConnectionTransport
         {
             public List<byte[]> SentPackets { get; } = [];

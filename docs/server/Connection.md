@@ -36,7 +36,7 @@ Encodes and sends a payload through the asynchronous transport path.
 
 ### `Close()`
 
-Closes the underlying transport.
+Marks internal session receive processing unusable before closing the underlying transport. Later synchronous and asynchronous receives therefore throw `ObjectDisposedException` without buffering data or invoking a packet handler, even if the transport implementation does not enforce its own closed state.
 
 ## Notes
 

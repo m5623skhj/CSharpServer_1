@@ -52,6 +52,8 @@ Sync and async receive calls share one semaphore to protect packet buffer state 
 
 Handler failures other than `InvalidDataException` release the receive slot without making the session unusable, preserving the existing recovery behavior for application-level failures.
 
+`Connection` can internally mark session receive processing unusable before transport shutdown. Because each receive checks this state after acquiring the shared slot, later and queued receives cannot append data after the connection has been closed.
+
 Async receive internals avoid synchronization-context capture so a synchronously bridged receive does not depend on pumping a UI or single-threaded context before releasing the receive slot.
 
 `Send` synchronization depends on the configured packet sender. Server connections use the thread-safe `StreamConnectionTransport` sender.
