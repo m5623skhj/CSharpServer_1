@@ -87,6 +87,7 @@ namespace CSharpServer.Network
                     .ConfigureAwait(false);
                 if (readCount == 0)
                 {
+                    MarkUnusable();
                     return false;
                 }
 
@@ -148,6 +149,7 @@ namespace CSharpServer.Network
 
                 if (readCount == 0)
                 {
+                    MarkUnusable();
                     return false;
                 }
 
@@ -259,6 +261,7 @@ namespace CSharpServer.Network
         {
             if (readCount == 0)
             {
+                MarkUnusable();
                 return false;
             }
 

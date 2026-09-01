@@ -46,7 +46,9 @@ Test-only stream that keeps a read pending until the test supplies one byte with
 
 - Null stream and data handler constructor arguments are rejected.
 - When bytes are read, `ReadOnce` calls the handler and returns `true`.
-- When EOF is reached, `ReadOnce` does not call the handler and returns `false`.
+- When EOF is reached, `ReadOnce` does not call the handler, returns `false`, and rejects later reads even if the stream exposes additional bytes.
+- Asynchronous EOF also rejects later reads without delivering newly exposed bytes.
+- The idle-timeout read overload treats normal EOF as terminal without misclassifying it as a timeout.
 - Zero buffer size is rejected by the constructor.
 - Concurrent `ReadOnceAsync` calls do not overlap stream reads.
 - The second async read remains incomplete while the first read owns the semaphore slot.

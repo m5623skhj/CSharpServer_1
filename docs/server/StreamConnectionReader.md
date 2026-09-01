@@ -20,7 +20,8 @@ Reads from a `Stream` and forwards read bytes to a data handler.
 
 - Reuses the buffer allocated during construction.
 - Calls `Stream.Read`.
-- Returns `false` when EOF is reached.
+- Returns `false` and marks the reader unusable when EOF is reached, without closing the stream.
+- Rejects later reads with `ObjectDisposedException` so an EOF-terminated receive direction cannot resume if a custom stream later exposes more bytes.
 - Invokes the data handler and returns `true` when bytes are read.
 - Serializes concurrent calls so the stream and data handler are accessed by one read operation at a time.
 - Marks the reader unusable and closes the stream if the read or handler reports cancellation after exclusive read access is acquired.
@@ -31,7 +32,8 @@ Reads from a `Stream` and forwards read bytes to a data handler.
 
 - Waits asynchronously for exclusive reader access.
 - Reads one chunk into the reusable buffer with `Stream.ReadAsync` and the supplied cancellation token.
-- Returns `false` at EOF or awaits the async data handler and returns `true`.
+- Returns `false` and marks the reader unusable at EOF, or awaits the async data handler and returns `true`.
+- Rejects later reads after EOF without closing the stream.
 - Propagates cancellation through `OperationCanceledException`.
 - Leaves the stream open when cancellation occurs while waiting for exclusive reader access because no read or handler work has started.
 - Marks the reader unusable and closes the stream when cancellation interrupts an active read or handler, preventing later reads from reusing uncertain packet state.
@@ -42,7 +44,7 @@ Reads from a `Stream` and forwards read bytes to a data handler.
 
 ## Internal Async Read Behavior
 
-The idle-timeout overload accepts values up to `UInt32.MaxValue - 1` milliseconds and rejects values outside the supported positive range before reading. It uses a linked token only for the pending stream read. An idle timeout marks the reader unusable, closes the stream, and returns `false`; this prevents a canceled read with uncertain packet state from being reused. If stream cleanup fails, it throws `IOException` with both the timeout cancellation and close failure retained in an inner `AggregateException`. Caller cancellation during an active read or handler also closes the stream and propagates. After bytes arrive, the overload invokes the async data handler with the original caller cancellation token so content processing and writes are not classified as client idle time. This overload also avoids synchronization-context capture across its asynchronous waits.
+The idle-timeout overload accepts values up to `UInt32.MaxValue - 1` milliseconds and rejects values outside the supported positive range before reading. It uses a linked token only for the pending stream read. An idle timeout marks the reader unusable, closes the stream, and returns `false`; this prevents a canceled read with uncertain packet state from being reused. A normal EOF also marks the reader unusable but does not close the stream. If stream cleanup after timeout fails, it throws `IOException` with both the timeout cancellation and close failure retained in an inner `AggregateException`. Caller cancellation during an active read or handler also closes the stream and propagates. After bytes arrive, the overload invokes the async data handler with the original caller cancellation token so content processing and writes are not classified as client idle time. This overload also avoids synchronization-context capture across its asynchronous waits.
 
 ## Constructor Behavior
 
@@ -57,7 +59,7 @@ Synchronous and asynchronous calls share one `SemaphoreSlim`. Public callbacks r
 
 `StreamConnection` can internally mark the reader unusable before it closes the shared transport. This keeps the high-level connection lifecycle independent of whether a custom `Stream` enforces disposal on later reads.
 
-Once active work is canceled, reaches the idle timeout, or fails with `IOException` or `InvalidDataException`, the unusable state is recorded before stream cleanup. Later reads therefore fail with `ObjectDisposedException` even if stream cleanup itself throws.
+Once EOF is observed, active work is canceled, reaches the idle timeout, or fails with `IOException` or `InvalidDataException`, the unusable state is recorded before returning or performing stream cleanup. Later reads therefore fail with `ObjectDisposedException` even when EOF did not close the stream or cleanup itself throws.
 
 Async read internals do not depend on pumping a UI or single-threaded caller context before invoking the handler or releasing the read slot.
 

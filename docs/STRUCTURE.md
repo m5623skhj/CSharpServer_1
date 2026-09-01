@@ -79,6 +79,7 @@ The network layer adapts byte streams and TCP connections into packet sessions.
 - `Connection` also rejects sync and async sends after close independently of transport behavior, including when transport shutdown itself fails.
 - `StreamConnectionReader` serializes synchronous and asynchronous raw reads from a stream.
 - `StreamConnectionReader` reuses one read buffer and passes borrowed memory through the internal pipeline.
+- EOF makes `StreamConnectionReader` terminal without closing the stream, preventing a completed receive direction from processing later bytes exposed by a custom stream.
 - Active read or handler cancellation makes `StreamConnectionReader` unusable and closes the stream, while cancellation queued at the read semaphore leaves the current connection untouched.
 - A reader idle timeout follows the active-cancellation cleanup rule but completes normally after closing the connection; cleanup failure preserves both causes as `IOException`.
 - Sync and async reader `IOException` failures also make the reader unusable before stream cleanup so partial inbound packet state cannot be reused.

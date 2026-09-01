@@ -56,6 +56,63 @@ namespace UnitTest.Network
         }
 
         [Fact]
+        public void ReadOnce_ThrowsObjectDisposedException_WhenEndOfFileWasReached()
+        {
+            using var stream = new MemoryStream();
+            var receivedData = new List<byte[]>();
+            var reader = new StreamConnectionReader(
+                stream,
+                inBufferSize: 8,
+                data => receivedData.Add(data.ToArray()));
+            Assert.False(reader.ReadOnce());
+            stream.Write([0x01]);
+            stream.Position = 0;
+
+            Assert.Throws<ObjectDisposedException>(() => reader.ReadOnce());
+            Assert.Empty(receivedData);
+        }
+
+        [Fact]
+        public async Task ReadOnceAsync_ThrowsObjectDisposedException_WhenEndOfFileWasReached()
+        {
+            using var stream = new MemoryStream();
+            var receivedData = new List<byte[]>();
+            var reader = new StreamConnectionReader(
+                stream,
+                inBufferSize: 8,
+                data => receivedData.Add(data.ToArray()));
+            Assert.False(await reader.ReadOnceAsync(CancellationToken.None));
+            stream.Write([0x01]);
+            stream.Position = 0;
+
+            await Assert.ThrowsAsync<ObjectDisposedException>(() =>
+                reader.ReadOnceAsync(CancellationToken.None));
+            Assert.Empty(receivedData);
+        }
+
+        [Fact]
+        public async Task ReadOnceAsync_WithIdleTimeout_ThrowsObjectDisposedException_WhenEndOfFileWasReached()
+        {
+            using var stream = new MemoryStream();
+            var receivedData = new List<byte[]>();
+            var reader = new StreamConnectionReader(
+                stream,
+                inBufferSize: 8,
+                data => receivedData.Add(data.ToArray()));
+            Assert.False(await reader.ReadOnceAsync(
+                CancellationToken.None,
+                TimeSpan.FromSeconds(1)));
+            stream.Write([0x01]);
+            stream.Position = 0;
+
+            await Assert.ThrowsAsync<ObjectDisposedException>(() =>
+                reader.ReadOnceAsync(
+                    CancellationToken.None,
+                    TimeSpan.FromSeconds(1)));
+            Assert.Empty(receivedData);
+        }
+
+        [Fact]
         public void ReadOnce_ClosesReader_WhenReadThrowsIOException()
         {
             var expectedException = new IOException("read failed");
