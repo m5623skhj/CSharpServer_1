@@ -1,4 +1,4 @@
-# CSharpServer/CSharpServer/Network/StreamConnectionTransport.cs
+# CSharpServer/CSharpServer.Networking/Network/StreamConnectionTransport.cs
 
 ## Purpose
 

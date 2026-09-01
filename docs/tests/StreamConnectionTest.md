@@ -38,9 +38,19 @@ Test-only synchronization context that queues posted continuations so context ca
 
 Test-only stream whose EOF completion is controlled independently by the test.
 
+### `ReplyingPacketHandler`
+
+Test-only public handler implementation that replies through `IConnectionSender`.
+
+### `AsyncDuplexStream`
+
+Test-only stream with independent scripted reads and recorded asynchronous writes.
+
 ## Test Coverage
 
 - Construction rejects null streams and packet handlers.
+- Public `IConnectionPacketHandler` composition can send an asynchronous response and receives
+  the caller cancellation token.
 - Construction rejects zero and negative buffer sizes.
 - `ReadOnce` reads an encoded packet and invokes the payload handler.
 - `ReadUntilEnd` handles packets split across multiple reads.

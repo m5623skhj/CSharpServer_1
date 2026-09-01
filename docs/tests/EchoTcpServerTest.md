@@ -14,6 +14,9 @@ Tests real loopback TCP echo behavior.
 
 Verifies `EchoTcpServer` and `EchoClient` integration over loopback TCP.
 
+`EchoTcpServer` is now an Echo-specific facade over `TcpServer`; these tests preserve the
+existing Echo behavior and the inherited listener lifecycle contract during that extraction.
+
 ### `QueueingSynchronizationContext`
 
 Test-only synchronization context that queues posted continuations so server-loop context capture can be detected deterministically.

@@ -1,4 +1,4 @@
-# CSharpServer/CSharpServer/Network/StreamConnectionReader.cs
+# CSharpServer/CSharpServer.Networking/Network/StreamConnectionReader.cs
 
 ## Purpose
 

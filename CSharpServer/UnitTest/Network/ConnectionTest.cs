@@ -18,7 +18,18 @@ namespace UnitTest.Network
             var transport = new FakeConnectionTransport();
 
             Assert.Throws<ArgumentNullException>(() =>
-                new Connection(transport, null!));
+                new Connection(transport, (Action<byte[]>)null!));
+        }
+
+        [Fact]
+        public void Constructor_ThrowsArgumentNullException_WhenPublicPacketHandlerIsNull()
+        {
+            var transport = new FakeConnectionTransport();
+
+            var exception = Assert.Throws<ArgumentNullException>(() =>
+                new Connection(transport, (IConnectionPacketHandler)null!));
+
+            Assert.Equal("packetHandler", exception.ParamName);
         }
 
         [Fact]

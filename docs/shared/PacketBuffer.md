@@ -1,4 +1,4 @@
-# CSharpServer/CSharpServer/Packet/PacketBuffer.cs
+# CSharpServer/CSharpServer.Networking/Packet/PacketBuffer.cs
 
 ## Purpose
 

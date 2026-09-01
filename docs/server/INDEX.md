@@ -15,11 +15,14 @@
 
 - [Connection](Connection.md)
 - [EchoTcpServer](EchoTcpServer.md)
+- [IConnectionPacketHandler](IConnectionPacketHandler.md)
+- [IConnectionSender](IConnectionSender.md)
 - [IConnectionTransport](IConnectionTransport.md)
 - [Session](Session.md)
 - [StreamConnection](StreamConnection.md)
 - [StreamConnectionReader](StreamConnectionReader.md)
 - [StreamConnectionTransport](StreamConnectionTransport.md)
+- [TcpServer](TcpServer.md)
 
 ## Shared Protocol
 

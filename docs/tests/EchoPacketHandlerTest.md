@@ -16,9 +16,8 @@ Verifies that `EchoPacketHandler` sends back the exact payload it receives.
 
 ## Test Coverage
 
-- Null packet sender constructor arguments are rejected.
-- Null asynchronous packet sender constructor arguments are rejected.
+- Null synchronous and asynchronous sender arguments are rejected.
 - Null payloads are rejected before synchronous or asynchronous sender invocation.
-- `Handle` calls the configured sender once.
+- `Handle` calls the supplied connection sender once.
 - The sent payload equals the received payload.
-- `HandleAsync` passes the same payload and cancellation token to the asynchronous sender.
+- `HandleAsync` passes the same payload and cancellation token to the supplied sender.

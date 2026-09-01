@@ -1,44 +1,26 @@
+using CSharpServer.Network;
+
 namespace CSharpServer.Content
 {
-    public sealed class EchoPacketHandler
+    public sealed class EchoPacketHandler : IConnectionPacketHandler
     {
-        private readonly Action<byte[]> packetSender;
-        private readonly Func<byte[], CancellationToken, ValueTask> asyncPacketSender;
-
-        public EchoPacketHandler(Action<byte[]> packetSender)
-            : this(
-                packetSender,
-                (payload, _) =>
-                {
-                    packetSender(payload);
-                    return ValueTask.CompletedTask;
-                })
+        public void Handle(IConnectionSender sender, byte[] payload)
         {
-        }
-
-        internal EchoPacketHandler(
-            Action<byte[]> packetSender,
-            Func<byte[], CancellationToken, ValueTask> asyncPacketSender)
-        {
-            ArgumentNullException.ThrowIfNull(packetSender);
-            ArgumentNullException.ThrowIfNull(asyncPacketSender);
-
-            this.packetSender = packetSender;
-            this.asyncPacketSender = asyncPacketSender;
-        }
-
-        public void Handle(byte[] payload)
-        {
+            ArgumentNullException.ThrowIfNull(sender);
             ArgumentNullException.ThrowIfNull(payload);
 
-            packetSender(payload);
+            sender.Send(payload);
         }
 
-        public ValueTask HandleAsync(byte[] payload, CancellationToken cancellationToken)
+        public ValueTask HandleAsync(
+            IConnectionSender sender,
+            byte[] payload,
+            CancellationToken cancellationToken)
         {
+            ArgumentNullException.ThrowIfNull(sender);
             ArgumentNullException.ThrowIfNull(payload);
 
-            return asyncPacketSender(payload, cancellationToken);
+            return sender.SendAsync(payload, cancellationToken);
         }
     }
 }

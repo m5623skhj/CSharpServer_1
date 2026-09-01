@@ -1,4 +1,4 @@
-# CSharpServer/CSharpServer/Network/IConnectionTransport.cs
+# CSharpServer/CSharpServer.Networking/Network/IConnectionTransport.cs
 
 ## Purpose
 

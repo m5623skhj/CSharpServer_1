@@ -1,4 +1,4 @@
-# CSharpServer/CSharpServer/Network/Connection.cs
+# CSharpServer/CSharpServer.Networking/Network/Connection.cs
 
 ## Purpose
 
@@ -14,7 +14,9 @@ Adapts a `Session` to a transport.
 
 Combines payload handling with an `IConnectionTransport`.
 
-Rejects a null transport or payload handler during construction.
+Rejects a null transport or payload handler during construction. The public
+`IConnectionPacketHandler` constructor supplies this connection as a restricted
+`IConnectionSender`, allowing external content to reply without receiving the raw transport.
 
 ## Public Methods
 

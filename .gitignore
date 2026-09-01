@@ -5,3 +5,6 @@ CSharpServer/UnitTest/bin/
 CSharpServer/UnitTest/obj/
 CSharpServer/CSharpClient/bin/
 CSharpServer/CSharpClient/obj/
+CSharpServer/CSharpServer.Networking/bin/
+CSharpServer/CSharpServer.Networking/obj/
+artifacts/

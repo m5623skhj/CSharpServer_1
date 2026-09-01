@@ -2,11 +2,12 @@
 
 ## Solution
 
-The solution is organized into three projects.
+The solution is organized into four projects.
 
 | Project | Role |
 | :--- | :--- |
-| `CSharpServer` | Server executable and shared protocol/network/content code. |
+| `CSharpServer.Networking` | Packable protocol, connection, stream, and TCP server library. |
+| `CSharpServer` | Echo server executable and Echo content composition. |
 | `CSharpClient` | Test client executable for sending echo requests to the server. |
 | `UnitTest` | xUnit tests for packet, session, network, content, server, and client behavior. |
 
@@ -26,17 +27,21 @@ CSharpServer
     -> ServerOptions
     -> ServerApplication
       -> EchoTcpServer
-        -> TcpListener
-        -> EchoStreamConnectionFactory
-          -> EchoPacketHandler
-          -> StreamConnection
-            -> StreamConnectionReader
-            -> Connection
-              -> Session
-                -> PacketBuffer
-                -> PacketEncoder
-            -> StreamConnectionTransport
+        -> TcpServer
+          -> TcpListener
+          -> EchoStreamConnectionFactory
+            -> EchoPacketHandler
+            -> StreamConnection
+              -> StreamConnectionReader
+              -> Connection
+                -> Session
+                  -> PacketBuffer
+                  -> PacketEncoder
+              -> StreamConnectionTransport
 ```
+
+`CSharpClient` and `CSharpServer` both reference `CSharpServer.Networking`. The networking
+library references neither executable and contains no Echo content.
 
 ## Protocol
 
@@ -73,7 +78,11 @@ The network layer adapts byte streams and TCP connections into packet sessions.
 - Packet or handler `InvalidDataException` makes session receive processing unusable before releasing its slot so queued input cannot extend a poisoned packet buffer.
 - `Session` avoids synchronization-context capture across async receive-slot and packet-handler waits.
 - `Session.Receive(byte[])` rejects null byte arrays before appending data to the packet buffer.
-- `Session`, `Connection`, `StreamConnectionReader`, and `EchoPacketHandler` reject null collaborators at construction.
+- `Session`, `Connection`, and `StreamConnectionReader` reject null collaborators at construction.
+- `IConnectionPacketHandler` is the public content boundary for synchronous and asynchronous
+  decoded payload handling.
+- `IConnectionSender` lets content send encoded payloads without exposing raw transport or
+  connection lifetime operations.
 - `Connection` connects `Session` to a transport and preserves async handler cancellation and failure propagation.
 - `Connection.Close` marks session receive processing unusable before transport shutdown, preventing later or queued input from reaching packet handlers.
 - `Connection` also rejects sync and async sends after close independently of transport behavior, including when transport shutdown itself fails.
@@ -91,7 +100,8 @@ The network layer adapts byte streams and TCP connections into packet sessions.
 - `StreamConnectionTransport` rejects a null stream at construction so transport failures fail at the API boundary.
 - `StreamConnectionTransport.Send(byte[])` rejects null byte arrays before stream writes.
 - `StreamConnection` sync and async send paths reject null payloads, encode them, and preserve caller cancellation for asynchronous writes and flushes.
-- Concurrent echo processing propagates cancellation through packet handlers and async stream writes.
+- Public packet-handler processing propagates cancellation through handlers and asynchronous
+  stream writes.
 - `StreamConnection` composes stream reader, transport, and connection.
 - `StreamConnection.Close` marks the reader unusable before closing the shared transport, so later reads cannot outlive the high-level connection even with a close-tolerant custom stream.
 - `StreamConnection` avoids synchronization-context capture while repeating normal and idle-timeout asynchronous reads.
@@ -103,26 +113,27 @@ The network layer adapts byte streams and TCP connections into packet sessions.
 - `ServerApplication` honors pre-cancellation after validating options but before listener creation, binding, or startup output.
 - `ServerApplication` awaits server shutdown without capturing a caller synchronization context.
 - `ServerApplication` rejects null options before reading server configuration.
-- `EchoTcpServer` accepts TCP clients and handles each as an echo stream connection.
-- `EchoTcpServer` validates its bind port as `0..65535`, preserving port `0` for OS-assigned test and runtime binding.
-- `EchoTcpServer.Port` exposes only a successfully bound listener endpoint and is serialized with listener startup and disposal.
-- `EchoTcpServer` can run either for a fixed client count or as a cancellable concurrent accept loop.
-- Fixed-count `EchoTcpServer` accepts and handler waits avoid caller synchronization-context capture.
-- Open-ended `EchoTcpServer` accept and cancellation cleanup waits also avoid caller synchronization-context capture.
-- Default echo client handlers avoid synchronization-context capture even when a queued accept completes synchronously.
+- `TcpServer` accepts TCP clients and creates their `StreamConnection` through an injected,
+  thread-safe connection factory.
+- `TcpServer` validates its bind port as `0..65535`, preserving port `0` for OS-assigned test and runtime binding.
+- `TcpServer.Port` exposes only a successfully bound listener endpoint and is serialized with listener startup and disposal.
+- `TcpServer` can run either for a fixed client count or as a cancellable concurrent accept loop.
+- Fixed-count `TcpServer` accepts and handler waits avoid caller synchronization-context capture.
+- Open-ended `TcpServer` accept and cancellation cleanup waits also avoid caller synchronization-context capture.
+- Default client handlers avoid synchronization-context capture even when a queued accept completes synchronously.
 - A semaphore bounds active client handlers, and slots are released on completion, failure, or cancellation.
 - Synchronous and asynchronous accept APIs share that semaphore, so concurrent synchronous callers cannot bypass the configured limit.
 - Faulted or unexpectedly canceled handlers stop the accept loop immediately and propagate their completion error.
 - Fixed-count mode also stops remaining accepts instead of waiting for the configured count after a handler fault or unexpected cancellation.
-- `EchoTcpServer` tracks accepted clients at server scope so disposal and accept failures can close every active connection.
+- `TcpServer` tracks accepted clients at server scope so disposal and accept failures can close every active connection.
 - Disposal cancels both asynchronous accept modes, stops the listener, closes active clients, and disposes cancellation and slot resources.
-- Concurrent `EchoTcpServer.Dispose` calls are serialized so every returning caller observes completed resource cleanup.
+- Concurrent `TcpServer.Dispose` calls are serialized so every returning caller observes completed resource cleanup.
 - Disposal interrupts blocked synchronous accepts with `ObjectDisposedException` rather than exposing listener shutdown socket errors.
 - Deferred connection-slot disposal is retried after synchronous handlers complete so shutdown during handling does not skip cleanup.
 - Each asynchronous client read has a resettable idle timeout so inactive connections cannot remain indefinitely.
 - Idle timeout tokens apply only to pending stream reads; packet handlers and writes retain the server cancellation token.
 - Concurrent client handlers use cancellation-aware asynchronous stream reads.
-- On cancellation, the open-ended `EchoTcpServer` loop closes active clients, normalizes handler cancellation tied to its token, and waits for handler tasks to finish.
+- On cancellation, the open-ended `TcpServer` loop closes active clients, normalizes handler cancellation tied to its token, and waits for handler tasks to finish.
 - Client-level malformed packet and connection exceptions are isolated from the server accept loop without swallowing general `InvalidOperationException` failures.
 
 ### Content Layer
@@ -130,9 +141,12 @@ The network layer adapts byte streams and TCP connections into packet sessions.
 The content layer defines what to do with decoded payloads.
 
 - `EchoPacketHandler` sends the same payload back.
-- `EchoPacketHandler` rejects null payloads before invoking synchronous or asynchronous senders.
+- `EchoPacketHandler` implements `IConnectionPacketHandler` and rejects null sender or payload
+  arguments before replying.
 - `EchoStreamConnectionFactory` rejects null streams and non-positive buffer sizes before composing network objects.
-- `EchoStreamConnectionFactory` wires echo behavior into a `StreamConnection` using one shared transport for echo, send, and close operations.
+- `EchoStreamConnectionFactory` wires echo behavior through the public networking handler API.
+- `EchoTcpServer` is a thin compatibility facade that supplies the Echo connection factory to
+  `TcpServer`.
 
 ## Client Layers
 

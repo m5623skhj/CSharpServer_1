@@ -1,86 +1,106 @@
 using CSharpServer.Content;
+using CSharpServer.Network;
 
 namespace UnitTest.Content
 {
     public class EchoPacketHandlerTest
     {
         [Fact]
-        public void Constructor_ThrowsArgumentNullException_WhenPacketSenderIsNull()
+        public void Handle_ThrowsArgumentNullException_WhenSenderIsNull()
         {
+            var handler = new EchoPacketHandler();
+
             Assert.Throws<ArgumentNullException>(() =>
-                new EchoPacketHandler(null!));
+                handler.Handle(null!, [0x01]));
         }
 
         [Fact]
-        public void Constructor_ThrowsArgumentNullException_WhenAsyncPacketSenderIsNull()
+        public void HandleAsync_ThrowsArgumentNullException_WhenSenderIsNull()
         {
-            Assert.Throws<ArgumentNullException>(() =>
-                new EchoPacketHandler(_ => { }, null!));
+            var handler = new EchoPacketHandler();
+
+            void HandleWithNullSender()
+            {
+                _ = handler.HandleAsync(null!, [0x01], CancellationToken.None);
+            }
+
+            Assert.Throws<ArgumentNullException>(HandleWithNullSender);
         }
 
         [Fact]
         public void Handle_SendsSamePayload()
         {
             var payload = new byte[] { 0x68, 0x65, 0x6C, 0x6C, 0x6F };
-            var sentPayloads = new List<byte[]>();
-            var handler = new EchoPacketHandler(sentPayloads.Add);
+            var sender = new RecordingConnectionSender();
+            var handler = new EchoPacketHandler();
 
-            handler.Handle(payload);
+            handler.Handle(sender, payload);
 
-            var sentPayload = Assert.Single(sentPayloads);
-            Assert.Equal(payload, sentPayload);
+            Assert.Same(payload, sender.SentPayload);
         }
 
         [Fact]
         public void Handle_ThrowsArgumentNullException_WhenPayloadIsNull()
         {
-            var sentPayloads = new List<byte[]>();
-            var handler = new EchoPacketHandler(sentPayloads.Add);
+            var sender = new RecordingConnectionSender();
+            var handler = new EchoPacketHandler();
 
             var exception = Assert.Throws<ArgumentNullException>(() =>
-                handler.Handle(null!));
+                handler.Handle(sender, null!));
 
             Assert.Equal("payload", exception.ParamName);
-            Assert.Empty(sentPayloads);
+            Assert.Null(sender.SentPayload);
         }
 
         [Fact]
         public void HandleAsync_ThrowsArgumentNullException_WhenPayloadIsNull()
         {
-            var sentPayloads = new List<byte[]>();
-            var handler = new EchoPacketHandler(sentPayloads.Add);
+            var sender = new RecordingConnectionSender();
+            var handler = new EchoPacketHandler();
 
             void HandleNullPayload()
             {
-                _ = handler.HandleAsync(null!, CancellationToken.None);
+                _ = handler.HandleAsync(sender, null!, CancellationToken.None);
             }
 
             var exception = Assert.Throws<ArgumentNullException>(HandleNullPayload);
 
             Assert.Equal("payload", exception.ParamName);
-            Assert.Empty(sentPayloads);
+            Assert.Null(sender.SentPayload);
         }
 
         [Fact]
         public async Task HandleAsync_SendsSamePayloadAndCancellationToken()
         {
             var payload = new byte[] { 0x68, 0x65, 0x6C, 0x6C, 0x6F };
-            byte[]? sentPayload = null;
-            var sentCancellationToken = CancellationToken.None;
+            var sender = new RecordingConnectionSender();
             using var cancellation = new CancellationTokenSource();
-            var handler = new EchoPacketHandler(
-                _ => { },
-                (inPayload, cancellationToken) =>
-                {
-                    sentPayload = inPayload;
-                    sentCancellationToken = cancellationToken;
-                    return ValueTask.CompletedTask;
-                });
+            var handler = new EchoPacketHandler();
 
-            await handler.HandleAsync(payload, cancellation.Token);
+            await handler.HandleAsync(sender, payload, cancellation.Token);
 
-            Assert.Same(payload, sentPayload);
-            Assert.Equal(cancellation.Token, sentCancellationToken);
+            Assert.Same(payload, sender.SentPayload);
+            Assert.Equal(cancellation.Token, sender.CancellationToken);
+        }
+
+        private sealed class RecordingConnectionSender : IConnectionSender
+        {
+            public byte[]? SentPayload { get; private set; }
+            public CancellationToken CancellationToken { get; private set; }
+
+            public void Send(byte[] payload)
+            {
+                SentPayload = payload;
+            }
+
+            public ValueTask SendAsync(
+                byte[] payload,
+                CancellationToken cancellationToken)
+            {
+                SentPayload = payload;
+                CancellationToken = cancellationToken;
+                return ValueTask.CompletedTask;
+            }
         }
     }
 }

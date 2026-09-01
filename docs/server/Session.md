@@ -1,4 +1,4 @@
-# CSharpServer/CSharpServer/Network/Session.cs
+# CSharpServer/CSharpServer.Networking/Network/Session.cs
 
 ## Purpose
 

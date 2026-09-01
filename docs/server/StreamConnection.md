@@ -1,4 +1,4 @@
-# CSharpServer/CSharpServer/Network/StreamConnection.cs
+# CSharpServer/CSharpServer.Networking/Network/StreamConnection.cs
 
 ## Purpose
 
@@ -16,9 +16,14 @@ High-level connection wrapper for a `Stream`.
 
 ## Construction
 
-The public constructor creates a `StreamConnectionTransport` for the supplied stream.
+Both public constructors create a `StreamConnectionTransport` for the supplied stream.
 
-An internal composition constructor accepts an existing transport so factories can share one transport between content handlers and the internal `Connection`.
+The delegate constructor remains available for simple receive-only composition. The
+`IConnectionPacketHandler` constructor is the public content boundary: handlers receive an
+`IConnectionSender` for synchronous and asynchronous payload replies without access to the
+raw transport or connection lifetime controls.
+
+Internal composition constructors remain available to focused library tests.
 
 Construction rejects null streams, non-positive buffer sizes, and null packet handlers before composing the reader and connection.
 

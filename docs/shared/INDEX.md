@@ -1,6 +1,7 @@
 # Shared Documentation
 
-Shared files are currently implemented in the `CSharpServer` project and referenced by the client project.
+Shared files are implemented in the packable `CSharpServer.Networking` class library and
+referenced by both executable projects.
 
 ## Packet Protocol
 

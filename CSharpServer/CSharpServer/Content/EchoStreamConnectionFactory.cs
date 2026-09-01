@@ -1,5 +1,4 @@
 using CSharpServer.Network;
-using CSharpServer.Packet;
 
 namespace CSharpServer.Content
 {
@@ -10,20 +9,10 @@ namespace CSharpServer.Content
             ArgumentNullException.ThrowIfNull(stream);
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(inBufferSize);
 
-            var transport = new StreamConnectionTransport(stream);
-            var echoHandler = new EchoPacketHandler(
-                payload => transport.Send(PacketEncoder.Encode(payload)),
-                (payload, cancellationToken) => transport.SendAsync(
-                    PacketEncoder.Encode(payload),
-                    cancellationToken));
-            var connection = new StreamConnection(
+            return new StreamConnection(
                 stream,
                 inBufferSize,
-                echoHandler.Handle,
-                echoHandler.HandleAsync,
-                transport);
-
-            return connection;
+                new EchoPacketHandler());
         }
     }
 }

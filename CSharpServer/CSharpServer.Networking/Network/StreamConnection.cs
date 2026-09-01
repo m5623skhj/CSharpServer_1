@@ -16,6 +16,24 @@ namespace CSharpServer.Network
         {
         }
 
+        public StreamConnection(
+            Stream stream,
+            int inBufferSize,
+            IConnectionPacketHandler packetHandler)
+        {
+            ArgumentNullException.ThrowIfNull(stream);
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(inBufferSize);
+            ArgumentNullException.ThrowIfNull(packetHandler);
+
+            var transport = new StreamConnectionTransport(stream);
+            connection = new Connection(transport, packetHandler);
+            reader = new StreamConnectionReader(
+                stream,
+                inBufferSize,
+                connection.ReceiveFromTransport,
+                connection.ReceiveFromTransportAsync);
+        }
+
         internal StreamConnection(
             Stream stream,
             int inBufferSize,

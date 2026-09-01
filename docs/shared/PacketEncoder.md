@@ -1,4 +1,4 @@
-# CSharpServer/CSharpServer/Packet/PacketEncoder.cs
+# CSharpServer/CSharpServer.Networking/Packet/PacketEncoder.cs
 
 ## Purpose
 

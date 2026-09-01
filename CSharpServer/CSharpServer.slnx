@@ -1,5 +1,6 @@
 <Solution>
   <Project Path="CSharpClient/CSharpClient.csproj" />
+  <Project Path="CSharpServer.Networking/CSharpServer.Networking.csproj" />
   <Project Path="CSharpServer/CSharpServer.csproj" />
   <Project Path="UnitTest/UnitTest.csproj" />
 </Solution>

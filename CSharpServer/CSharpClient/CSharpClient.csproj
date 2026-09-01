@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\CSharpServer\CSharpServer.csproj" />
+    <ProjectReference Include="..\CSharpServer.Networking\CSharpServer.Networking.csproj" />
   </ItemGroup>
 
 </Project>

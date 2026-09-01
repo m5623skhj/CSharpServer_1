@@ -11,4 +11,8 @@
     <InternalsVisibleTo Include="UnitTest" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\CSharpServer.Networking\CSharpServer.Networking.csproj" />
+  </ItemGroup>
+
 </Project>

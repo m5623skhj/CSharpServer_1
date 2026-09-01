@@ -3,6 +3,7 @@
 ## Structure
 
 - [Project Structure](STRUCTURE.md)
+- [Networking Library](NETWORKING_LIBRARY.md)
 
 ## Server Documents
 

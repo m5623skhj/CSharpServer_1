@@ -20,7 +20,7 @@ Test-only `IConnectionTransport` implementation that records sent packets and cl
 
 ## Test Coverage
 
-- Null transport plus synchronous and asynchronous payload handler constructor arguments are rejected.
+- Null transport plus delegate and public packet handler constructor arguments are rejected.
 - Raw transport bytes are passed into the session and decoded for the handler.
 - Asynchronous receive passes the decoded payload and caller cancellation token to the async handler.
 - Asynchronous receive propagates the original handler exception.

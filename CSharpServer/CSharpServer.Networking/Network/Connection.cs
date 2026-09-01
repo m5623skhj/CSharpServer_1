@@ -1,6 +1,6 @@
 namespace CSharpServer.Network
 {
-    public sealed class Connection
+    public sealed class Connection : IConnectionSender
     {
         private readonly Session session;
         private readonly IConnectionTransport transport;
@@ -16,6 +16,22 @@ namespace CSharpServer.Network
                     return ValueTask.CompletedTask;
                 })
         {
+        }
+
+        public Connection(
+            IConnectionTransport transport,
+            IConnectionPacketHandler packetHandler)
+        {
+            ArgumentNullException.ThrowIfNull(transport);
+            ArgumentNullException.ThrowIfNull(packetHandler);
+
+            this.transport = transport;
+            session = new Session(
+                packet => packetHandler.Handle(this, packet),
+                transport.Send,
+                (packet, cancellationToken) =>
+                    packetHandler.HandleAsync(this, packet, cancellationToken),
+                transport.SendAsync);
         }
 
         internal Connection(

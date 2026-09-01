@@ -1,4 +1,4 @@
-# CSharpServer/CSharpServer/Packet/ProtocolLimits.cs
+# CSharpServer/CSharpServer.Networking/Packet/ProtocolLimits.cs
 
 ## Purpose
 

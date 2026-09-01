@@ -35,9 +35,38 @@ namespace UnitTest.Network
             using var stream = new MemoryStream();
 
             var exception = Assert.Throws<ArgumentNullException>(() =>
-                new StreamConnection(stream, inBufferSize: 16, null!));
+                new StreamConnection(stream, inBufferSize: 16, (Action<byte[]>)null!));
 
             Assert.Equal("packetHandler", exception.ParamName);
+        }
+
+        [Fact]
+        public void Constructor_ThrowsArgumentNullException_WhenPublicPacketHandlerIsNull()
+        {
+            using var stream = new MemoryStream();
+
+            var exception = Assert.Throws<ArgumentNullException>(() =>
+                new StreamConnection(
+                    stream,
+                    inBufferSize: 16,
+                    (IConnectionPacketHandler)null!));
+
+            Assert.Equal("packetHandler", exception.ParamName);
+        }
+
+        [Fact]
+        public async Task ReadUntilEndAsync_AllowsPublicPacketHandlerToSendResponse()
+        {
+            var payload = new byte[] { 0x01, 0x02, 0x03 };
+            using var stream = new AsyncDuplexStream(PacketEncoder.Encode(payload));
+            using var cancellation = new CancellationTokenSource();
+            var handler = new ReplyingPacketHandler();
+            var connection = new StreamConnection(stream, inBufferSize: 16, handler);
+
+            await connection.ReadUntilEndAsync(cancellation.Token);
+
+            Assert.Equal(PacketEncoder.Encode(payload), stream.WrittenData);
+            Assert.Equal(cancellation.Token, handler.CancellationToken);
         }
 
         [Fact]
@@ -334,6 +363,87 @@ namespace UnitTest.Network
             protected override void Dispose(bool disposing)
             {
                 IsDisposed = true;
+                base.Dispose(disposing);
+            }
+        }
+
+        private sealed class ReplyingPacketHandler : IConnectionPacketHandler
+        {
+            public CancellationToken CancellationToken { get; private set; }
+
+            public void Handle(IConnectionSender sender, byte[] payload)
+            {
+                sender.Send(payload);
+            }
+
+            public ValueTask HandleAsync(
+                IConnectionSender sender,
+                byte[] payload,
+                CancellationToken cancellationToken)
+            {
+                CancellationToken = cancellationToken;
+                return sender.SendAsync(payload, cancellationToken);
+            }
+        }
+
+        private sealed class AsyncDuplexStream : Stream
+        {
+            private readonly MemoryStream readStream;
+            private readonly MemoryStream writeStream = new();
+
+            public AsyncDuplexStream(byte[] readData)
+            {
+                readStream = new MemoryStream(readData);
+            }
+
+            public byte[] WrittenData => writeStream.ToArray();
+            public override bool CanRead => true;
+            public override bool CanSeek => false;
+            public override bool CanWrite => true;
+            public override long Length => throw new NotSupportedException();
+            public override long Position
+            {
+                get => throw new NotSupportedException();
+                set => throw new NotSupportedException();
+            }
+
+            public override void Flush()
+            {
+            }
+
+            public override int Read(byte[] buffer, int offset, int count) =>
+                throw new NotSupportedException();
+
+            public override ValueTask<int> ReadAsync(
+                Memory<byte> buffer,
+                CancellationToken cancellationToken = default)
+            {
+                return readStream.ReadAsync(buffer, cancellationToken);
+            }
+
+            public override long Seek(long offset, SeekOrigin origin) =>
+                throw new NotSupportedException();
+
+            public override void SetLength(long value) => throw new NotSupportedException();
+
+            public override void Write(byte[] buffer, int offset, int count) =>
+                throw new NotSupportedException();
+
+            public override ValueTask WriteAsync(
+                ReadOnlyMemory<byte> buffer,
+                CancellationToken cancellationToken = default)
+            {
+                return writeStream.WriteAsync(buffer, cancellationToken);
+            }
+
+            protected override void Dispose(bool disposing)
+            {
+                if (disposing)
+                {
+                    readStream.Dispose();
+                    writeStream.Dispose();
+                }
+
                 base.Dispose(disposing);
             }
         }
