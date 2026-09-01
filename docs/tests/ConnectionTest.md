@@ -16,7 +16,7 @@ Verifies connection-to-session and connection-to-transport behavior.
 
 ### `FakeConnectionTransport`
 
-Test-only `IConnectionTransport` implementation that records sent packets and close state.
+Test-only `IConnectionTransport` implementation that records sent packets and close state and can simulate a close failure.
 
 ## Test Coverage
 
@@ -28,3 +28,5 @@ Test-only `IConnectionTransport` implementation that records sent packets and cl
 - Sending a payload asynchronously writes an encoded packet through the async transport contract.
 - Closing a connection closes the transport.
 - Synchronous and asynchronous receives after close throw `ObjectDisposedException` without invoking their packet handlers.
+- Synchronous and asynchronous sends after close throw `ObjectDisposedException` without reaching a transport that does not enforce its own closed state.
+- A transport close failure is propagated while the connection remains closed to later sends.

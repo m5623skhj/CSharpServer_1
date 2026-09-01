@@ -4,6 +4,7 @@ namespace CSharpServer.Network
     {
         private readonly Session session;
         private readonly IConnectionTransport transport;
+        private int closedState;
 
         public Connection(IConnectionTransport transport, Action<byte[]> packetHandler)
             : this(
@@ -48,18 +49,28 @@ namespace CSharpServer.Network
 
         public void Send(byte[] payload)
         {
+            ThrowIfClosed();
             session.Send(payload);
         }
 
         public ValueTask SendAsync(byte[] payload, CancellationToken cancellationToken)
         {
+            ThrowIfClosed();
             return session.SendAsync(payload, cancellationToken);
         }
 
         public void Close()
         {
+            Interlocked.Exchange(ref closedState, 1);
             session.MarkReceiveUnusable();
             transport.Close();
+        }
+
+        private void ThrowIfClosed()
+        {
+            ObjectDisposedException.ThrowIf(
+                Volatile.Read(ref closedState) != 0,
+                this);
         }
     }
 }

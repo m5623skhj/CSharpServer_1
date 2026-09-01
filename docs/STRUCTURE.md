@@ -76,6 +76,7 @@ The network layer adapts byte streams and TCP connections into packet sessions.
 - `Session`, `Connection`, `StreamConnectionReader`, and `EchoPacketHandler` reject null collaborators at construction.
 - `Connection` connects `Session` to a transport and preserves async handler cancellation and failure propagation.
 - `Connection.Close` marks session receive processing unusable before transport shutdown, preventing later or queued input from reaching packet handlers.
+- `Connection` also rejects sync and async sends after close independently of transport behavior, including when transport shutdown itself fails.
 - `StreamConnectionReader` serializes synchronous and asynchronous raw reads from a stream.
 - `StreamConnectionReader` reuses one read buffer and passes borrowed memory through the internal pipeline.
 - Active read or handler cancellation makes `StreamConnectionReader` unusable and closes the stream, while cancellation queued at the read semaphore leaves the current connection untouched.

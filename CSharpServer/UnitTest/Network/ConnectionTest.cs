@@ -160,10 +160,51 @@ namespace UnitTest.Network
             Assert.Empty(receivedPackets);
         }
 
+        [Fact]
+        public void Send_ThrowsObjectDisposedException_WhenConnectionWasClosed()
+        {
+            var transport = new FakeConnectionTransport();
+            var connection = new Connection(transport, _ => { });
+            connection.Close();
+
+            Assert.Throws<ObjectDisposedException>(() => connection.Send([0x01]));
+            Assert.Empty(transport.SentPackets);
+        }
+
+        [Fact]
+        public async Task SendAsync_ThrowsObjectDisposedException_WhenConnectionWasClosed()
+        {
+            var transport = new FakeConnectionTransport();
+            var connection = new Connection(transport, _ => { });
+            connection.Close();
+
+            await Assert.ThrowsAsync<ObjectDisposedException>(() =>
+                connection.SendAsync([0x01], CancellationToken.None).AsTask());
+            Assert.Empty(transport.SentPackets);
+        }
+
+        [Fact]
+        public void Send_ThrowsObjectDisposedException_WhenTransportCloseFailed()
+        {
+            var closeException = new IOException("Close failed.");
+            var transport = new FakeConnectionTransport
+            {
+                CloseException = closeException
+            };
+            var connection = new Connection(transport, _ => { });
+
+            var actualException = Assert.Throws<IOException>(connection.Close);
+
+            Assert.Same(closeException, actualException);
+            Assert.Throws<ObjectDisposedException>(() => connection.Send([0x01]));
+            Assert.Empty(transport.SentPackets);
+        }
+
         private sealed class FakeConnectionTransport : IConnectionTransport
         {
             public List<byte[]> SentPackets { get; } = [];
             public bool IsClosed { get; private set; }
+            public Exception? CloseException { get; init; }
 
             public void Send(byte[] data)
             {
@@ -180,6 +221,11 @@ namespace UnitTest.Network
 
             public void Close()
             {
+                if (CloseException is not null)
+                {
+                    throw CloseException;
+                }
+
                 IsClosed = true;
             }
         }

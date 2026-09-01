@@ -28,15 +28,15 @@ Passes raw bytes into asynchronous session processing, forwards the caller cance
 
 ### `Send(byte[] payload)`
 
-Sends a payload through the internal `Session`, which encodes it before transport write.
+Sends a payload through the internal `Session`, which encodes it before transport write. Throws `ObjectDisposedException` without encoding or calling the transport after the connection has been closed.
 
 ### `SendAsync(byte[] payload, CancellationToken cancellationToken)`
 
-Encodes and sends a payload through the asynchronous transport path.
+Encodes and sends a payload through the asynchronous transport path. Throws `ObjectDisposedException` without calling the transport after the connection has been closed.
 
 ### `Close()`
 
-Marks internal session receive processing unusable before closing the underlying transport. Later synchronous and asynchronous receives therefore throw `ObjectDisposedException` without buffering data or invoking a packet handler, even if the transport implementation does not enforce its own closed state.
+Marks the connection closed and internal session receive processing unusable before closing the underlying transport. Later sends and receives therefore throw `ObjectDisposedException` without reaching packet handlers or a transport implementation that does not enforce its own closed state. If transport close fails, that exception is propagated while the connection remains closed.
 
 ## Notes
 
